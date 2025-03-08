@@ -22,6 +22,7 @@ export default async function SearchPage({
 
   const searchQuery = searchParams.q || "";
 
+  // Redirect to dashboard if no search query
   if (!searchQuery) {
     return redirect("/dashboard");
   }
@@ -80,8 +81,6 @@ export default async function SearchPage({
     console.error("Search error:", error);
     // Continue with empty results if there's an error
   }
-
-  // Results are already set in the try/catch block above
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">

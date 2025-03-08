@@ -21,9 +21,13 @@ export const createClient = async () => {
           }));
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
-          });
+          // Only set cookies in a server action or route handler
+          if (cookiesToSet.length > 0) {
+            return new Response(null, {
+              status: 401,
+              statusText: "Unauthorized",
+            });
+          }
         },
       },
     },

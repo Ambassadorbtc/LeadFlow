@@ -3,6 +3,7 @@ import Sidebar from "@/components/dashboard/sidebar";
 import { redirect } from "next/navigation";
 import { createClient } from "@/app/actions";
 import SettingsClient from "./settings-client";
+import { Suspense } from "react";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -26,7 +27,13 @@ export default async function SettingsPage() {
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardNavbar />
+        <Suspense
+          fallback={
+            <div className="h-14 border-b border-gray-200 dark:border-gray-800"></div>
+          }
+        >
+          <DashboardNavbar />
+        </Suspense>
         <main className="flex-1 overflow-auto">
           <SettingsClient user={user} settings={userSettings || {}} />
         </main>

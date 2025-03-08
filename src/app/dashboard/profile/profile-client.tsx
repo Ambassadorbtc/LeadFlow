@@ -16,10 +16,12 @@ import {
   Calendar,
   Clock,
   UserCircle,
+  LogOut,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import { CheckCircle } from "lucide-react";
+import { signOutAction } from "@/app/actions/auth-actions";
 
 export default function ProfileClient({
   user,
@@ -365,7 +367,17 @@ export default function ProfileClient({
                       rows={4}
                     />
                   </div>
-                  <div className="flex justify-end">
+                  <div className="flex justify-between">
+                    <form action={signOutAction}>
+                      <Button
+                        variant="destructive"
+                        type="submit"
+                        className="flex items-center gap-2"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Sign Out
+                      </Button>
+                    </form>
                     <Button type="submit" disabled={isLoading}>
                       {isLoading ? "Saving..." : "Save Changes"}
                     </Button>

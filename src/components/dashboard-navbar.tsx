@@ -10,9 +10,12 @@ import {
 } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
 import { Bell, Menu, Plus, Search, UserCircle } from "lucide-react";
+import SearchButton from "./search-button";
 import { useRouter } from "next/navigation";
 import { ThemeSwitcher } from "./theme-switcher";
 import { useState } from "react";
+import { signOutAction } from "@/app/actions/auth-actions";
+import { searchAction } from "@/app/actions/search-actions";
 import Image from "next/image";
 
 export default function DashboardNavbar() {
@@ -24,6 +27,22 @@ export default function DashboardNavbar() {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/dashboard/search?q=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
+  // This is a duplicate of the above function, but it's needed to fix a bug
+  // where the search form doesn't work on some pages
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      window.location.href = `/dashboard/search?q=${encodeURIComponent(searchQuery)}`;
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      const searchUrl = `/dashboard/search?q=${encodeURIComponent(searchQuery)}`;
+      window.location.href = searchUrl;
     }
   };
 
@@ -47,12 +66,13 @@ export default function DashboardNavbar() {
           </Link>
         </div>
 
-        <div className="hidden lg:flex flex-1 max-w-md relative">
+        <div className="hidden md:flex flex-1 max-w-md relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <form onSubmit={handleSearch}>
+          <form action={searchAction} className="w-full">
             <input
               type="text"
-              value={searchQuery}
+              name="searchQuery"
+              defaultValue={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search across all data..."
               className="w-full pl-10 pr-4 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-white"
@@ -88,6 +108,7 @@ export default function DashboardNavbar() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          <SearchButton />
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
@@ -108,13 +129,12 @@ export default function DashboardNavbar() {
               <DropdownMenuItem asChild>
                 <Link href="/dashboard/settings">Settings</Link>
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  router.refresh();
-                }}
-              >
-                Sign out
+              <DropdownMenuItem asChild>
+                <form action={signOutAction}>
+                  <button className="w-full text-left px-2 py-1.5 text-sm">
+                    Sign out
+                  </button>
+                </form>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -7,12 +7,15 @@ import {
   ClipboardList,
   Home,
   LayoutDashboard,
+  LogOut,
   UserCircle,
   Users,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { signOutAction } from "@/app/actions/auth-actions";
+import { createClient } from "@/supabase/client";
 
 type SidebarItem = {
   title: string;
@@ -55,6 +58,8 @@ const sidebarItems: SidebarItem[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
 
   return (
     <div className="hidden md:flex h-auto min-h-screen w-16 lg:w-20 flex-col border-r border-[#e5e7eb] bg-white dark:bg-gray-900 dark:border-gray-800 flex-shrink-0">
@@ -78,6 +83,17 @@ export default function Sidebar() {
           ))}
         </ul>
       </nav>
+      <div className="mt-auto pb-4 flex justify-center">
+        <form action={signOutAction}>
+          <button
+            type="submit"
+            className="p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 transition-colors"
+            title="Sign Out"
+          >
+            <LogOut className="h-5 w-5" />
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
