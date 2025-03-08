@@ -206,7 +206,7 @@ export default function LeadsClientPage({
   }, [searchTerm, statusFilter, sortField, sortOrder]);
 
   return (
-    <div className="px-2 py-4 w-full bg-[#f6f6f8] dark:bg-gray-900">
+    <div className="px-2 py-4 w-full overflow-x-auto bg-[#f6f6f8] dark:bg-gray-900">
       {/* Header Section */}
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
@@ -628,7 +628,7 @@ export default function LeadsClientPage({
                           lead.created_at || new Date(),
                         ).toLocaleDateString()}
                       </td>
-                      <td className="px-2 py-1 min-w-[200px] sm:table-cell">
+                      <td className="px-2 py-1 min-w-[250px] sm:table-cell">
                         <LeadCommentCell leadId={lead.id} />
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-right">
