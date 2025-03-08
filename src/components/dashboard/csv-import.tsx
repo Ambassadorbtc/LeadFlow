@@ -18,12 +18,13 @@ type CSVImportProps = {
 export default function CSVImport({
   onImport,
   type,
-  isLoading = false,
+  isLoading: initialLoading = false,
 }: CSVImportProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(initialLoading);
   const router = useRouter();
   const supabase = createClient();
   const { toast } = useToast();
@@ -228,8 +229,6 @@ export default function CSVImport({
       setIsLoading(false);
     }
   };
-
-  const [isLoading, setIsLoading] = useState(false);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">

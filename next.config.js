@@ -12,10 +12,8 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Webpack 5 configuration
-  webpack: (config) => {
-    return config;
-  },
+  // Use SWC compiler
+  swcMinify: true,
 };
 
 if (process.env.NEXT_PUBLIC_TEMPO) {
