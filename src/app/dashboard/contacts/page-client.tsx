@@ -13,8 +13,6 @@ import {
   CheckCircle,
   Download,
 } from "lucide-react";
-import Link from "next/link";
-import LeadCommentCell from "@/components/dashboard/lead-comment-cell";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -30,70 +28,54 @@ import {
 import { createClient } from "@/supabase/client";
 import { exportToCSV } from "@/utils/export-utils";
 import { useToast } from "@/components/ui/use-toast";
+import Link from "next/link";
 
-export default function LeadsClientPage({
-  initialLeads = [],
-}: {
-  initialLeads: any[];
-}) {
+export default function ContactsPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
   const { toast } = useToast();
 
   // Get search params
-  const initialSearch = searchParams.get("search") || "";
-  const initialStatus = searchParams.get("status") || "";
+  const initialSearch = searchParams.get("name") || "";
+  const initialCompany = searchParams.get("company") || "";
   const initialSort = searchParams.get("sort") || "created_at";
   const initialOrder = searchParams.get("order") || "desc";
 
   // State for filters and search
   const [searchTerm, setSearchTerm] = useState(initialSearch);
-  const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [companyFilter, setCompanyFilter] = useState(initialCompany);
   const [sortField, setSortField] = useState(initialSort);
   const [sortOrder, setSortOrder] = useState(initialOrder);
-  const [filteredLeads, setFilteredLeads] = useState(initialLeads);
-  const [leads, setLeads] = useState(initialLeads);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Status options for filtering
-  const statusOptions = [
-    "All",
-    "New",
-    "Prospect",
-    "Convert",
-    "Contacted",
-    "Qualified",
-    "Proposal",
-    "Negotiation",
-    "Won",
-    "Lost",
-  ];
+  const [contacts, setContacts] = useState([]);
+  const [filteredContacts, setFilteredContacts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [companies, setCompanies] = useState([]);
 
   // Sort options
   const sortOptions = [
     { label: "Created Date", value: "created_at" },
-    { label: "Business Name", value: "business_name" },
-    { label: "Contact Name", value: "contact_name" },
-    { label: "Status", value: "status" },
-    { label: "Deal Value", value: "deal_value" },
+    { label: "Name", value: "name" },
+    { label: "Email", value: "email" },
+    { label: "Company", value: "company" },
+    { label: "Position", value: "position" },
   ];
 
-  // Fetch leads with filters
-  const fetchLeads = async () => {
+  // Fetch contacts with filters
+  const fetchContacts = async () => {
     setIsLoading(true);
     try {
-      let query = supabase.from("leads").select("*");
+      let query = supabase.from("contacts").select("*");
 
-      // Apply status filter if provided
-      if (statusFilter && statusFilter !== "All") {
-        query = query.eq("status", statusFilter);
+      // Apply company filter if provided
+      if (companyFilter) {
+        query = query.eq("company", companyFilter);
       }
 
       // Apply search term if provided
       if (searchTerm) {
         query = query.or(
-          `business_name.ilike.%${searchTerm}%,contact_name.ilike.%${searchTerm}%,prospect_id.ilike.%${searchTerm}%,contact_email.ilike.%${searchTerm}%`,
+          `name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%,position.ilike.%${searchTerm}%`,
         );
       }
 
@@ -103,21 +85,31 @@ export default function LeadsClientPage({
       const { data, error } = await query;
 
       if (error) {
-        console.error("Error fetching leads:", error);
+        console.error("Error fetching contacts:", error);
         return;
       }
 
-      setLeads(data || []);
-      setFilteredLeads(data || []);
+      setContacts(data || []);
+      setFilteredContacts(data || []);
+
+      // Extract unique companies for filter
+      const uniqueCompanies = [
+        ...new Set(
+          data
+            ?.map((contact) => contact.company)
+            .filter((company) => company && company.trim() !== "") || [],
+        ),
+      ];
+      setCompanies(uniqueCompanies.sort());
     } catch (error) {
-      console.error("Error in fetchLeads:", error);
+      console.error("Error in fetchContacts:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
   // Update URL with search params
-  const updateSearchParams = (params: Record<string, string>) => {
+  const updateSearchParams = (params) => {
     const url = new URL(window.location.href);
 
     // Update or add each parameter
@@ -135,21 +127,20 @@ export default function LeadsClientPage({
   };
 
   // Handle search input
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearch = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
-    updateSearchParams({ search: value });
+    updateSearchParams({ name: value });
   };
 
-  // Handle status filter change
-  const handleStatusChange = (status: string) => {
-    const newStatus = status === "All" ? "" : status;
-    setStatusFilter(newStatus);
-    updateSearchParams({ status: newStatus });
+  // Handle company filter change
+  const handleCompanyChange = (company) => {
+    setCompanyFilter(company);
+    updateSearchParams({ company });
   };
 
   // Handle sort change
-  const handleSortChange = (field: string) => {
+  const handleSortChange = (field) => {
     // If clicking the same field, toggle order
     if (field === sortField) {
       const newOrder = sortOrder === "asc" ? "desc" : "asc";
@@ -166,20 +157,20 @@ export default function LeadsClientPage({
   // Clear all filters
   const clearFilters = () => {
     setSearchTerm("");
-    setStatusFilter("");
+    setCompanyFilter("");
     setSortField("created_at");
     setSortOrder("desc");
     updateSearchParams({
-      search: "",
-      status: "",
+      name: "",
+      company: "",
       sort: "created_at",
       order: "desc",
     });
   };
 
-  // Export leads to CSV
+  // Export contacts to CSV
   const handleExport = () => {
-    const success = exportToCSV(leads, "leads-export.csv");
+    const success = exportToCSV(contacts, "contacts-export.csv");
     if (success) {
       toast({
         title: (
@@ -188,22 +179,22 @@ export default function LeadsClientPage({
             <span>Export Successful</span>
           </div>
         ),
-        description: `${leads.length} leads exported successfully.`,
+        description: `${contacts.length} contacts exported successfully.`,
         variant: "success",
       });
     } else {
       toast({
         title: "Export Failed",
-        description: "There was an error exporting your leads.",
+        description: "There was an error exporting your contacts.",
         variant: "destructive",
       });
     }
   };
 
-  // Fetch leads when filters change
+  // Fetch contacts when filters change
   useEffect(() => {
-    fetchLeads();
-  }, [searchTerm, statusFilter, sortField, sortOrder]);
+    fetchContacts();
+  }, [searchTerm, companyFilter, sortField, sortOrder]);
 
   return (
     <div className="px-2 py-4 w-full bg-[#f6f6f8] dark:bg-gray-900">
@@ -211,11 +202,11 @@ export default function LeadsClientPage({
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold text-[#1a1a1a] dark:text-white">
-            Leads
+            Contacts
           </h1>
           <div className="flex items-center mt-2">
             <p className="text-[#6b7280] dark:text-gray-400 mr-4">
-              Manage your prospects and leads
+              Manage your contacts and relationships
             </p>
           </div>
         </div>
@@ -226,14 +217,14 @@ export default function LeadsClientPage({
             name="search"
             value={searchTerm}
             onChange={handleSearch}
-            placeholder="Search leads by name, business, or prospect ID..."
+            placeholder="Search contacts by name, email, or company..."
             className="w-full px-2 py-2 border-none focus:outline-none focus:ring-0 text-sm dark:bg-gray-800 dark:text-white"
           />
           {searchTerm && (
             <button
               onClick={() => {
                 setSearchTerm("");
-                updateSearchParams({ search: "" });
+                updateSearchParams({ name: "" });
               }}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             >
@@ -250,19 +241,19 @@ export default function LeadsClientPage({
             <Download className="h-5 w-5" />
             <span>Export</span>
           </Button>
-          <a
-            href="/dashboard/leads/import"
+          <Link
+            href="/dashboard/contacts/import"
             className="bg-white dark:bg-gray-800 border border-[#e5e7eb] dark:border-gray-700 text-[#4b5563] dark:text-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
           >
             <Plus className="h-5 w-5" />
-            <span>Import Leads</span>
-          </a>
+            <span>Import Contacts</span>
+          </Link>
           <Link
-            href="/dashboard/leads/add"
+            href="/dashboard/contacts/add"
             className="bg-[#4f46e5] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#4338ca] transition-colors shadow-sm"
           >
             <Plus className="h-5 w-5" />
-            <span>Add Lead</span>
+            <span>Add Contact</span>
           </Link>
         </div>
       </header>
@@ -270,41 +261,49 @@ export default function LeadsClientPage({
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-4 flex-wrap">
         <div className="flex gap-3 flex-wrap">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className="bg-white dark:bg-gray-800 shadow-sm border border-[#e5e7eb] dark:border-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 text-[#4b5563] dark:text-gray-300 text-sm h-auto"
-              >
-                <Filter className="h-4 w-4" />
-                <span>Filter</span>
-                {statusFilter && (
-                  <span className="ml-1 text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">
-                    {statusFilter}
-                  </span>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56">
-              <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                {statusOptions.map((status) => (
+          {companies.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="bg-white dark:bg-gray-800 shadow-sm border border-[#e5e7eb] dark:border-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 text-[#4b5563] dark:text-gray-300 text-sm h-auto"
+                >
+                  <Filter className="h-4 w-4" />
+                  <span>Company</span>
+                  {companyFilter && (
+                    <span className="ml-1 text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">
+                      {companyFilter}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56">
+                <DropdownMenuLabel>Filter by Company</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
                   <DropdownMenuItem
-                    key={status}
-                    onClick={() => handleStatusChange(status)}
+                    onClick={() => handleCompanyChange("")}
                     className="flex justify-between items-center"
                   >
-                    {status}
-                    {(status === "All" && !statusFilter) ||
-                    status === statusFilter ? (
-                      <Check className="h-4 w-4" />
-                    ) : null}
+                    All Companies
+                    {!companyFilter && <Check className="h-4 w-4" />}
                   </DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  {companies.map((company) => (
+                    <DropdownMenuItem
+                      key={company}
+                      onClick={() => handleCompanyChange(company)}
+                      className="flex justify-between items-center"
+                    >
+                      {company}
+                      {company === companyFilter && (
+                        <Check className="h-4 w-4" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -342,7 +341,7 @@ export default function LeadsClientPage({
           </DropdownMenu>
 
           {(searchTerm ||
-            statusFilter ||
+            companyFilter ||
             sortField !== "created_at" ||
             sortOrder !== "desc") && (
             <Button
@@ -359,18 +358,18 @@ export default function LeadsClientPage({
 
       {/* Filter summary */}
       {(searchTerm ||
-        statusFilter ||
+        companyFilter ||
         sortField !== "created_at" ||
         sortOrder !== "desc") && (
         <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 px-4 py-2 rounded-lg mb-4 flex justify-between items-center">
           <div className="text-sm">
             <span className="font-medium">Filtered results:</span>{" "}
-            {filteredLeads.length} leads
+            {filteredContacts.length} contacts
             {searchTerm && (
               <span className="ml-2">• Search: "{searchTerm}"</span>
             )}
-            {statusFilter && (
-              <span className="ml-2">• Status: {statusFilter}</span>
+            {companyFilter && (
+              <span className="ml-2">• Company: {companyFilter}</span>
             )}
             {sortField !== "created_at" && (
               <span className="ml-2">
@@ -387,11 +386,11 @@ export default function LeadsClientPage({
       {isLoading && (
         <div className="text-center py-4">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
-          <p className="mt-2 text-gray-600">Loading leads...</p>
+          <p className="mt-2 text-gray-600">Loading contacts...</p>
         </div>
       )}
 
-      {/* Leads List */}
+      {/* Contacts List */}
       {!isLoading && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-auto">
           <div>
@@ -400,12 +399,12 @@ export default function LeadsClientPage({
                 <tr>
                   <th
                     scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider hidden md:table-cell cursor-pointer group"
-                    onClick={() => handleSortChange("prospect_id")}
+                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider cursor-pointer group"
+                    onClick={() => handleSortChange("name")}
                   >
                     <div className="flex items-center">
-                      Prospect ID
-                      {sortField === "prospect_id" && (
+                      Name
+                      {sortField === "name" && (
                         <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
                       )}
                     </div>
@@ -413,35 +412,11 @@ export default function LeadsClientPage({
                   <th
                     scope="col"
                     className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider cursor-pointer group"
-                    onClick={() => handleSortChange("business_name")}
-                  >
-                    <div className="flex items-center">
-                      Business
-                      {sortField === "business_name" && (
-                        <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider cursor-pointer group"
-                    onClick={() => handleSortChange("contact_name")}
-                  >
-                    <div className="flex items-center">
-                      Contact
-                      {sortField === "contact_name" && (
-                        <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell cursor-pointer group"
-                    onClick={() => handleSortChange("contact_email")}
+                    onClick={() => handleSortChange("email")}
                   >
                     <div className="flex items-center">
                       Email
-                      {sortField === "contact_email" && (
+                      {sortField === "email" && (
                         <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
                       )}
                     </div>
@@ -455,35 +430,23 @@ export default function LeadsClientPage({
                   <th
                     scope="col"
                     className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider cursor-pointer group"
-                    onClick={() => handleSortChange("status")}
+                    onClick={() => handleSortChange("company")}
                   >
                     <div className="flex items-center">
-                      Status
-                      {sortField === "status" && (
+                      Company
+                      {sortField === "company" && (
                         <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
                       )}
                     </div>
                   </th>
                   <th
                     scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider hidden md:table-cell cursor-pointer group"
-                    onClick={() => handleSortChange("owner")}
+                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider cursor-pointer group hidden md:table-cell"
+                    onClick={() => handleSortChange("position")}
                   >
                     <div className="flex items-center">
-                      Owner
-                      {sortField === "owner" && (
-                        <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider cursor-pointer group"
-                    onClick={() => handleSortChange("deal_value")}
-                  >
-                    <div className="flex items-center">
-                      Deal Value
-                      {sortField === "deal_value" && (
+                      Position
+                      {sortField === "position" && (
                         <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
                       )}
                     </div>
@@ -502,12 +465,6 @@ export default function LeadsClientPage({
                   </th>
                   <th
                     scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider whitespace-nowrap sm:table-cell"
-                  >
-                    Comment
-                  </th>
-                  <th
-                    scope="col"
                     className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider"
                   >
                     <span className="sr-only">Actions</span>
@@ -515,121 +472,62 @@ export default function LeadsClientPage({
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-[#f3f4f6] dark:divide-gray-700">
-                {filteredLeads && filteredLeads.length > 0 ? (
-                  filteredLeads.map((lead) => (
+                {filteredContacts && filteredContacts.length > 0 ? (
+                  filteredContacts.map((contact) => (
                     <tr
-                      key={lead.id}
+                      key={contact.id}
                       className="hover:bg-[#f9fafb] dark:hover:bg-gray-700 cursor-pointer transition-colors"
                       onClick={() =>
-                        (window.location.href = `/dashboard/leads/${lead.id}`)
+                        (window.location.href = `/dashboard/contacts/${contact.id}`)
                       }
                     >
-                      <td className="px-2 py-1 whitespace-nowrap hidden md:table-cell">
-                        <div className="text-xs font-medium text-[#111827] dark:text-white">
-                          {lead.prospect_id}
-                        </div>
-                      </td>
                       <td className="px-2 py-1 whitespace-nowrap">
                         <div className="flex items-center">
-                          <Link
-                            href={`/dashboard/companies?name=${encodeURIComponent(lead.business_name)}`}
-                            className="flex-shrink-0 h-6 w-6 flex items-center justify-center rounded-full bg-[#f3f4f6] dark:bg-gray-700 text-[#6b7280] dark:text-gray-400 hover:bg-[#e5e7eb] dark:hover:bg-gray-600"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Building2 className="h-3 w-3" />
-                          </Link>
-                          <div className="ml-1">
-                            <div className="text-xs font-medium text-[#111827] dark:text-white">
-                              {lead.business_name}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <Link
-                            href={`/dashboard/contacts?name=${encodeURIComponent(lead.contact_name)}`}
-                            className="flex-shrink-0 h-6 w-6 flex items-center justify-center rounded-full bg-[#eef2ff] dark:bg-indigo-900/30 text-[#4f46e5] dark:text-indigo-300 hover:bg-[#e0e7ff] dark:hover:bg-indigo-900/50"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                          <div className="flex-shrink-0 h-6 w-6 flex items-center justify-center rounded-full bg-[#eef2ff] dark:bg-indigo-900/30 text-[#4f46e5] dark:text-indigo-300">
                             <UserCircle className="h-3 w-3" />
-                          </Link>
+                          </div>
                           <div className="ml-1">
                             <div className="text-xs font-medium text-[#111827] dark:text-white">
-                              {lead.contact_name}
+                              {contact.name}
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-2 py-1 whitespace-nowrap hidden lg:table-cell">
+                      <td className="px-2 py-1 whitespace-nowrap">
                         <div className="text-xs text-[#4b5563] dark:text-gray-400">
-                          {lead.contact_email || "-"}
+                          {contact.email || "-"}
                         </div>
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap hidden lg:table-cell">
                         <div className="text-xs text-[#4b5563] dark:text-gray-400">
-                          {lead.phone || "-"}
+                          {contact.phone || "-"}
                         </div>
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap">
-                        {lead.status === "New" ? (
-                          <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-medium rounded-full bg-[#dbeafe] dark:bg-blue-900/30 text-[#1e40af] dark:text-blue-300">
-                            New
-                          </span>
-                        ) : lead.status === "Prospect" ? (
-                          <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-medium rounded-full bg-[#f3e8ff] dark:bg-purple-900/30 text-[#6b21a8] dark:text-purple-300">
-                            Prospect
-                          </span>
-                        ) : lead.status === "Convert" ? (
-                          <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-medium rounded-full bg-[#dcfce7] dark:bg-green-900/30 text-[#166534] dark:text-green-300">
-                            Convert
-                          </span>
-                        ) : (
-                          <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-medium rounded-full bg-[#f3f4f6] dark:bg-gray-700 text-[#4b5563] dark:text-gray-300">
-                            {lead.status || "New"}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap hidden md:table-cell">
-                        {lead.owner ? (
-                          <Link
-                            href={`/dashboard/leads?owner=${encodeURIComponent(lead.owner)}`}
-                            className="text-xs text-[#4f46e5] hover:underline inline-block"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {lead.owner}
-                          </Link>
+                        {contact.company ? (
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-5 w-5 flex items-center justify-center rounded-full bg-[#f3f4f6] dark:bg-gray-700 text-[#6b7280] dark:text-gray-400">
+                              <Building2 className="h-3 w-3" />
+                            </div>
+                            <div className="ml-1 text-xs text-[#4b5563] dark:text-gray-400">
+                              {contact.company}
+                            </div>
+                          </div>
                         ) : (
                           <div className="text-xs text-[#9ca3af] dark:text-gray-500">
                             -
                           </div>
                         )}
                       </td>
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        <div className="text-xs font-medium text-[#111827] dark:text-white">
-                          {lead.deal_value
-                            ? `${(isNaN(Number(lead.deal_value)) ? 0 : Number(lead.deal_value)).toLocaleString()}`
-                            : "-"}
-                        </div>
-                        <div className="text-xs">
-                          {lead.bf_interest && (
-                            <span className="text-[#4f46e5] mr-1">BF</span>
-                          )}
-                          {lead.ct_interest && (
-                            <span className="text-[#10b981] mr-1">CT</span>
-                          )}
-                          {lead.ba_interest && (
-                            <span className="text-[#8b5cf6]">BA</span>
-                          )}
+                      <td className="px-2 py-1 whitespace-nowrap hidden md:table-cell">
+                        <div className="text-xs text-[#4b5563] dark:text-gray-400">
+                          {contact.position || "-"}
                         </div>
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-xs text-[#6b7280] hidden md:table-cell">
                         {new Date(
-                          lead.created_at || new Date(),
+                          contact.created_at || new Date(),
                         ).toLocaleDateString()}
-                      </td>
-                      <td className="px-2 py-1 min-w-[200px] sm:table-cell">
-                        <LeadCommentCell leadId={lead.id} />
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-right">
                         <button
@@ -647,12 +545,12 @@ export default function LeadsClientPage({
                 ) : (
                   <tr>
                     <td
-                      colSpan={11}
+                      colSpan={7}
                       className="px-6 py-10 text-center text-[#6b7280] dark:text-gray-400"
                     >
-                      {leads.length > 0 ? (
+                      {contacts.length > 0 ? (
                         <>
-                          No leads match your search criteria.{" "}
+                          No contacts match your search criteria.{" "}
                           <button
                             onClick={clearFilters}
                             className="text-blue-600 dark:text-blue-400 hover:underline"
@@ -662,8 +560,8 @@ export default function LeadsClientPage({
                         </>
                       ) : (
                         <>
-                          No leads found. Import or add your first lead to get
-                          started.
+                          No contacts found. Import or add your first contact to
+                          get started.
                         </>
                       )}
                     </td>

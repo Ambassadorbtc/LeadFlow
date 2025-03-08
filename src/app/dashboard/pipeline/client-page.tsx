@@ -289,15 +289,15 @@ export default function PipelineClientPage({
       </div>
 
       {/* Pipeline Kanban Board */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 overflow-x-auto">
         {PIPELINE_STAGES.map((stage) => (
           <div
             key={stage}
-            className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm h-full min-w-[250px]"
+            className="bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm h-full min-w-[200px]"
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, stage)}
           >
-            <div className="p-3 border-b bg-white rounded-t-lg">
+            <div className="p-2 border-b bg-white rounded-t-lg">
               <h3 className="font-medium text-gray-800">{stage}</h3>
               <div className="text-xs text-gray-500 mt-1">
                 {dealsByStage[stage]?.length || 0} deals

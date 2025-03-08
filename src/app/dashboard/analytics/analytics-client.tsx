@@ -86,23 +86,8 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
     }))
     .filter((item) => item.value > 0);
 
-  // Use real data from leads, or if none exists, use the specified distribution
-  const finalLeadSourceData = (() => {
-    if (
-      leadSourceData.length === 0 ||
-      (leadSourceData.length === 1 && leadSourceData[0].name === "Other")
-    ) {
-      // Use the exact percentages specified
-      return [
-        { name: "Website", value: Math.ceil(leads.length * 0.39) || 39 },
-        { name: "Referral", value: Math.ceil(leads.length * 0.26) || 26 },
-        { name: "Direct", value: Math.ceil(leads.length * 0.17) || 17 },
-        { name: "Social", value: Math.ceil(leads.length * 0.09) || 9 },
-        { name: "Other", value: Math.ceil(leads.length * 0.09) || 9 },
-      ].filter((item) => item.value > 0);
-    }
-    return leadSourceData;
-  })();
+  // Only use real data from leads, no fallbacks
+  const finalLeadSourceData = leadSourceData;
 
   // Generate data for deal stages
   const stageData = PIPELINE_STAGES.map((stage) => ({
@@ -221,46 +206,30 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
     });
   })();
 
-  // Use the specified deal type distribution
-  const calculatedDealTypeData = (() => {
-    const realDealTypeMap = deals.reduce(
-      (acc, deal) => {
-        const type = deal.deal_type || "Other";
-        if (!acc[type]) {
-          acc[type] = 0;
-        }
-        acc[type] += Number(deal.value || 0);
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
+  // Only use real data from deals, no fallbacks
+  const calculatedDealTypeData = deals.reduce(
+    (acc, deal) => {
+      const type = deal.deal_type || "Other";
+      if (!acc[type]) {
+        acc[type] = 0;
+      }
+      acc[type] += Number(deal.value || 0);
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
-    // If we have real data with more than one type, use it
-    if (Object.keys(realDealTypeMap).length > 1) {
-      return Object.entries(realDealTypeMap)
-        .map(([name, value]) => ({
-          name,
-          value,
-        }))
-        .sort((a, b) => b.value - a.value);
-    }
+  // Convert to array format for the chart
+  const dealTypeData = Object.entries(calculatedDealTypeData)
+    .map(([name, value]) => ({
+      name,
+      value,
+    }))
+    .sort((a, b) => b.value - a.value);
 
-    // Otherwise use the specified distribution
-    const totalValue =
-      deals.reduce((sum, deal) => sum + Number(deal.value || 0), 0) || 100;
-    return [
-      { name: "Business Funding", value: totalValue },
-      { name: "Other", value: 0 },
-    ];
-  })();
-
-  // Use either the generated data or the props data
-  const finalMonthlyData =
-    generatedMonthlyData.length > 0 ? generatedMonthlyData : props.monthlyData;
-  const finalDealTypeData =
-    calculatedDealTypeData.length > 0
-      ? calculatedDealTypeData
-      : props.dealTypeData;
+  // Only use real data, no fallbacks
+  const finalMonthlyData = generatedMonthlyData;
+  const finalDealTypeData = dealTypeData;
 
   return (
     <div className="px-4 py-8 max-w-[1400px] mx-auto">
@@ -514,15 +483,7 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
                     </BarChart>
                   ) : (
                     <LineChart
-                      data={
-                        finalMonthlyData.filter((item) => item.value > 0)
-                          .length > 0
-                          ? finalMonthlyData
-                          : finalMonthlyData.map((item) => ({
-                              ...item,
-                              value: Math.random() * 1000 + 500,
-                            }))
-                      }
+                      data={finalMonthlyData.filter((item) => item.value > 0)}
                     >
                       <CartesianGrid
                         strokeDasharray="3 3"
