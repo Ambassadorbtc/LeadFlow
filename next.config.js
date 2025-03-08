@@ -4,23 +4,22 @@ const nextConfig = {
   images: {
     domains: ["images.unsplash.com"],
   },
-  // Disable type checking during build for faster builds
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Disable ESLint during build for faster builds
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Use SWC compiler
   swcMinify: true,
+  experimental: {
+    forceSwcTransforms: true,
+  },
 };
 
 if (process.env.NEXT_PUBLIC_TEMPO) {
-  nextConfig["experimental"] = {
-    // NextJS 14.1.3 to 14.2.11:
-    swcPlugins: [[require.resolve("tempo-devtools/swc/0.90"), {}]],
-  };
+  nextConfig.experimental.swcPlugins = [
+    [require.resolve("tempo-devtools/swc/0.90"), {}],
+  ];
 }
 
 module.exports = nextConfig;

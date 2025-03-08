@@ -3,7 +3,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { SmtpMessage } from "../smtp-message";
+import { SMTPMessage } from "../smtp-message";
 import { signUpAction } from "@/app/actions";
 import Navbar from "@/components/navbar";
 
@@ -94,7 +94,7 @@ export default async function Signup(props: {
             <FormMessage message={searchParams} />
           </form>
         </div>
-        <SmtpMessage />
+        <SMTPMessage />
       </div>
     </>
   );
