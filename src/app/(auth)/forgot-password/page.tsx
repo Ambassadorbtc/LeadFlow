@@ -3,7 +3,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { SmtpMessage } from "../smtp-message";
+import { SMTPMessage } from "../smtp-message";
 import { forgotPasswordAction } from "@/app/actions";
 import Navbar from "@/components/navbar";
 
@@ -27,15 +27,12 @@ export default async function ForgotPassword(props: {
         <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-sm">
           <form className="flex flex-col space-y-6">
             <div className="space-y-2 text-center">
-              <h1 className="text-3xl font-semibold tracking-tight">Reset Password</h1>
+              <h1 className="text-3xl font-semibold tracking-tight">
+                Forgot Password
+              </h1>
               <p className="text-sm text-muted-foreground">
-                Already have an account?{" "}
-                <Link
-                  className="text-primary font-medium hover:underline transition-all"
-                  href="/sign-in"
-                >
-                  Sign in
-                </Link>
+                Enter your email and we&apos;ll send you a link to reset your
+                password.
               </p>
             </div>
 
@@ -57,16 +54,25 @@ export default async function ForgotPassword(props: {
 
             <SubmitButton
               formAction={forgotPasswordAction}
-              pendingText="Sending reset link..."
+              pendingText="Sending..."
               className="w-full"
             >
-              Reset Password
+              Send Reset Link
             </SubmitButton>
+
+            <div className="text-center text-sm">
+              <Link
+                href="/sign-in"
+                className="text-primary font-medium hover:underline transition-all"
+              >
+                Back to Sign In
+              </Link>
+            </div>
 
             <FormMessage message={searchParams} />
           </form>
         </div>
-        <SmtpMessage />
+        <SMTPMessage />
       </div>
     </>
   );
