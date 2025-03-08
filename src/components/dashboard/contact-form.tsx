@@ -136,10 +136,16 @@ export default function ContactForm({
       </div>
 
       <div className="flex justify-end gap-3">
-        <Button type="button" variant="outline">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full md:w-auto"
+          disabled={isLoading}
+          onClick={() => window.history.back()}
+        >
           Cancel
         </Button>
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" className="w-full md:w-auto" disabled={isLoading}>
           {isLoading
             ? "Saving..."
             : initialData

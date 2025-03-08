@@ -26,54 +26,62 @@ export default async function SearchPage({
     return redirect("/dashboard");
   }
 
-  // Search across multiple tables
-  const [leadsResult, contactsResult, dealsResult, companiesResult] =
-    await Promise.all([
-      // Search leads
-      supabase
-        .from("leads")
-        .select("*")
-        .eq("user_id", user.id)
-        .or(
-          `prospect_id.ilike.%${searchQuery}%,business_name.ilike.%${searchQuery}%,contact_name.ilike.%${searchQuery}%,contact_email.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,address.ilike.%${searchQuery}%,owner.ilike.%${searchQuery}%`,
-        )
-        .limit(10),
+  // Search across multiple tables with error handling
+  let leads = [];
+  let contacts = [];
+  let deals = [];
+  let companies = [];
 
-      // Search contacts
-      supabase
-        .from("contacts")
-        .select("*")
-        .eq("user_id", user.id)
-        .or(
-          `name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%,company.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,position.ilike.%${searchQuery}%,address.ilike.%${searchQuery}%,owner.ilike.%${searchQuery}%`,
-        )
-        .limit(10),
+  try {
+    // Search leads
+    const leadsResult = await supabase
+      .from("leads")
+      .select("*")
+      .eq("user_id", user.id)
+      .or(
+        `prospect_id.ilike.%${searchQuery}%,business_name.ilike.%${searchQuery}%,contact_name.ilike.%${searchQuery}%,contact_email.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,address.ilike.%${searchQuery}%,owner.ilike.%${searchQuery}%`,
+      )
+      .limit(10);
+    leads = leadsResult.data || [];
 
-      // Search deals
-      supabase
-        .from("deals")
-        .select("*")
-        .eq("user_id", user.id)
-        .or(
-          `name.ilike.%${searchQuery}%,company.ilike.%${searchQuery}%,prospect_id.ilike.%${searchQuery}%,contact_name.ilike.%${searchQuery}%,stage.ilike.%${searchQuery}%,deal_type.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`,
-        )
-        .limit(10),
+    // Search contacts
+    const contactsResult = await supabase
+      .from("contacts")
+      .select("*")
+      .eq("user_id", user.id)
+      .or(
+        `name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%,company.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,position.ilike.%${searchQuery}%,address.ilike.%${searchQuery}%,owner.ilike.%${searchQuery}%`,
+      )
+      .limit(10);
+    contacts = contactsResult.data || [];
 
-      // Search companies
-      supabase
-        .from("companies")
-        .select("*")
-        .eq("user_id", user.id)
-        .or(
-          `name.ilike.%${searchQuery}%,industry.ilike.%${searchQuery}%,website.ilike.%${searchQuery}%,address.ilike.%${searchQuery}%,prospect_id.ilike.%${searchQuery}%`,
-        )
-        .limit(10),
-    ]);
+    // Search deals
+    const dealsResult = await supabase
+      .from("deals")
+      .select("*")
+      .eq("user_id", user.id)
+      .or(
+        `name.ilike.%${searchQuery}%,company.ilike.%${searchQuery}%,prospect_id.ilike.%${searchQuery}%,contact_name.ilike.%${searchQuery}%,stage.ilike.%${searchQuery}%,deal_type.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`,
+      )
+      .limit(10);
+    deals = dealsResult.data || [];
 
-  const leads = leadsResult.data || [];
-  const contacts = contactsResult.data || [];
-  const deals = dealsResult.data || [];
-  const companies = companiesResult.data || [];
+    // Search companies
+    const companiesResult = await supabase
+      .from("companies")
+      .select("*")
+      .eq("user_id", user.id)
+      .or(
+        `name.ilike.%${searchQuery}%,industry.ilike.%${searchQuery}%,website.ilike.%${searchQuery}%,address.ilike.%${searchQuery}%,prospect_id.ilike.%${searchQuery}%`,
+      )
+      .limit(10);
+    companies = companiesResult.data || [];
+  } catch (error) {
+    console.error("Search error:", error);
+    // Continue with empty results if there's an error
+  }
+
+  // Results are already set in the try/catch block above
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">

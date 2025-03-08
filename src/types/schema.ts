@@ -54,11 +54,9 @@ export type Lead = {
 };
 
 export const PIPELINE_STAGES = [
-  "Qualification",
-  "Needs Analysis",
-  "Value Proposition",
-  "Proposal",
-  "Negotiation",
+  "Contact Made",
+  "Quote Sent",
+  "Chasing",
   "Deal Closed",
   "Deal Lost",
 ];

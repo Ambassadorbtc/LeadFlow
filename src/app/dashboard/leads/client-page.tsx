@@ -502,7 +502,7 @@ export default function LeadsClientPage({
                   </th>
                   <th
                     scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell"
+                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider whitespace-nowrap sm:table-cell"
                   >
                     Comment
                   </th>
@@ -628,7 +628,7 @@ export default function LeadsClientPage({
                           lead.created_at || new Date(),
                         ).toLocaleDateString()}
                       </td>
-                      <td className="px-2 py-1 whitespace-nowrap min-w-[80px] hidden sm:table-cell">
+                      <td className="px-2 py-1 whitespace-nowrap min-w-[150px] sm:table-cell">
                         <LeadCommentCell leadId={lead.id} />
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-right">

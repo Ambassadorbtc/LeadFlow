@@ -37,7 +37,7 @@ export default function DashboardNavbar() {
         </div>
 
         <div className="hidden md:flex items-center mr-4">
-          <Link href="/dashboard" className="flex items-center">
+          <Link href="/" className="flex items-center">
             <img
               src="/images/leadflow-logo-with-icon.svg"
               alt="LeadFlow"

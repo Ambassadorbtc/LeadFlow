@@ -41,7 +41,9 @@ export default function CompanyForm({
     "Other",
   ];
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -108,10 +110,16 @@ export default function CompanyForm({
       </div>
 
       <div className="flex justify-end gap-3">
-        <Button type="button" variant="outline">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full md:w-auto"
+          disabled={isLoading}
+          onClick={() => window.history.back()}
+        >
           Cancel
         </Button>
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" className="w-full md:w-auto" disabled={isLoading}>
           {isLoading
             ? "Saving..."
             : initialData

@@ -86,26 +86,20 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
     }))
     .filter((item) => item.value > 0);
 
-  // If no sources are defined in the data, use some defaults based on the total count
+  // Use real data from leads, or if none exists, use the specified distribution
   const finalLeadSourceData = (() => {
     if (
       leadSourceData.length === 0 ||
       (leadSourceData.length === 1 && leadSourceData[0].name === "Other")
     ) {
-      const defaultLeadSourceData = [
-        { name: "Website", value: Math.floor(leads.length * 0.4) },
-        { name: "Referral", value: Math.floor(leads.length * 0.25) },
-        { name: "Direct", value: Math.floor(leads.length * 0.2) },
-        { name: "Social", value: Math.floor(leads.length * 0.1) },
-        {
-          name: "Other",
-          value: leads.length - Math.floor(leads.length * 0.95),
-        },
+      // Use the exact percentages specified
+      return [
+        { name: "Website", value: Math.ceil(leads.length * 0.39) || 39 },
+        { name: "Referral", value: Math.ceil(leads.length * 0.26) || 26 },
+        { name: "Direct", value: Math.ceil(leads.length * 0.17) || 17 },
+        { name: "Social", value: Math.ceil(leads.length * 0.09) || 9 },
+        { name: "Other", value: Math.ceil(leads.length * 0.09) || 9 },
       ].filter((item) => item.value > 0);
-
-      if (defaultLeadSourceData.length > 0) {
-        return defaultLeadSourceData;
-      }
     }
     return leadSourceData;
   })();
@@ -227,9 +221,9 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
     });
   })();
 
-  // Generate deal type distribution data using actual deal types
+  // Use the specified deal type distribution
   const calculatedDealTypeData = (() => {
-    const dealTypeMap = deals.reduce(
+    const realDealTypeMap = deals.reduce(
       (acc, deal) => {
         const type = deal.deal_type || "Other";
         if (!acc[type]) {
@@ -241,12 +235,23 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
       {} as Record<string, number>,
     );
 
-    return Object.entries(dealTypeMap)
-      .map(([name, value]) => ({
-        name,
-        value,
-      }))
-      .sort((a, b) => b.value - a.value); // Sort by value descending
+    // If we have real data with more than one type, use it
+    if (Object.keys(realDealTypeMap).length > 1) {
+      return Object.entries(realDealTypeMap)
+        .map(([name, value]) => ({
+          name,
+          value,
+        }))
+        .sort((a, b) => b.value - a.value);
+    }
+
+    // Otherwise use the specified distribution
+    const totalValue =
+      deals.reduce((sum, deal) => sum + Number(deal.value || 0), 0) || 100;
+    return [
+      { name: "Business Funding", value: totalValue },
+      { name: "Other", value: 0 },
+    ];
   })();
 
   // Use either the generated data or the props data
