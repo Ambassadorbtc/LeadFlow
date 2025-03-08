@@ -16,14 +16,26 @@ export default async function ProfilePage() {
   }
 
   // Fetch user profile data
-  const { data: profileData } = await supabase
-    .from("profiles")
+  const { data: profile } = await supabase
+    .from("users")
     .select("*")
     .eq("id", user.id)
     .single();
 
-  // Convert to plain object to avoid serialization issues
-  const profile = profileData ? JSON.parse(JSON.stringify(profileData)) : null;
+  // Fetch user activity
+  const { data: recentDeals = [] } = await supabase
+    .from("deals")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const { data: recentContacts = [] } = await supabase
+    .from("contacts")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(5);
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
@@ -31,7 +43,12 @@ export default async function ProfilePage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <DashboardNavbar />
         <main className="flex-1 overflow-auto">
-          <ProfileClient user={user} profile={profile} />
+          <ProfileClient
+            user={user}
+            profile={profile || {}}
+            recentDeals={recentDeals}
+            recentContacts={recentContacts}
+          />
         </main>
       </div>
     </div>

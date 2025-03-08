@@ -1,0 +1,17 @@
+<svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Logo icon -->
+  <path d="M15 10 L35 10 C40 10 45 15 45 20 L45 30 C45 35 40 40 35 40 L15 40 C10 40 5 35 5 30 L5 20 C5 15 10 10 15 10 Z" fill="url(#gradient)" />
+  
+  <!-- Flow lines -->
+  <path d="M15 20 L35 20" stroke="white" stroke-width="2" stroke-linecap="round" />
+  <path d="M15 25 L30 25" stroke="white" stroke-width="2" stroke-linecap="round" />
+  <path d="M15 30 L25 30" stroke="white" stroke-width="2" stroke-linecap="round" />
+</svg>

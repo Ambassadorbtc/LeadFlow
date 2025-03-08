@@ -8,7 +8,7 @@ import Link from "next/link";
 export default async function CompaniesPage({
   searchParams,
 }: {
-  searchParams: { name?: string };
+  searchParams: { name?: string; industry?: string };
 }) {
   const supabase = await createClient();
 
@@ -54,9 +54,19 @@ export default async function CompaniesPage({
     query = query.ilike("name", `%${searchParams.name}%`);
   }
 
+  // Apply industry filter if provided
+  if (searchParams.industry) {
+    query = query.eq("industry", searchParams.industry);
+  }
+
   const { data: companies = [] } = await query.order("name", {
     ascending: true,
   });
+
+  // Get unique industries for filter dropdown
+  const industries = [
+    ...new Set(companies.map((company) => company.industry).filter(Boolean)),
+  ].sort();
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
@@ -66,14 +76,28 @@ export default async function CompaniesPage({
         <main className="flex-1 overflow-auto">
           <div className="px-4 py-8 w-full">
             {/* Header Section */}
-            <header className="flex justify-between items-center mb-8">
+            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <div>
                 <h1 className="text-3xl font-bold dark:text-white">
                   Companies
                 </h1>
-                <p className="text-gray-500 dark:text-gray-400 mt-2">
-                  Manage your company accounts
-                </p>
+                <div className="flex items-center mt-2">
+                  <p className="text-gray-500 dark:text-gray-400 mr-4">
+                    Manage your company accounts
+                  </p>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-2 flex items-center w-full max-w-md">
+                <Search className="text-gray-400 h-5 w-5 ml-2 mr-1" />
+                <form action="" method="get" className="w-full">
+                  <input
+                    type="text"
+                    name="name"
+                    placeholder="Search companies..."
+                    className="w-full px-2 py-2 border-none focus:outline-none focus:ring-0 text-sm dark:bg-gray-700 dark:text-white"
+                    defaultValue={searchParams.name || ""}
+                  />
+                </form>
               </div>
               <Link
                 href="/dashboard/companies/add"
@@ -84,21 +108,31 @@ export default async function CompaniesPage({
               </Link>
             </header>
 
-            {/* Search */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-8">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <form action="" method="get">
-                  <input
-                    type="text"
-                    name="name"
-                    placeholder="Search companies..."
-                    className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    defaultValue={searchParams.name || ""}
-                  />
-                </form>
+            {/* Industry filter */}
+            {industries.length > 0 && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Filter by Industry
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href="/dashboard/companies"
+                    className={`px-3 py-1 text-sm rounded-full ${!searchParams.industry ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"}`}
+                  >
+                    All
+                  </Link>
+                  {industries.map((industry) => (
+                    <Link
+                      key={industry}
+                      href={`/dashboard/companies?industry=${encodeURIComponent(industry)}`}
+                      className={`px-3 py-1 text-sm rounded-full ${searchParams.industry === industry ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"}`}
+                    >
+                      {industry}
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Companies Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

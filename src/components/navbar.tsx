@@ -3,6 +3,7 @@ import { createClient } from "@/app/actions";
 import { Button } from "./ui/button";
 import { User, UserCircle } from "lucide-react";
 import UserProfile from "./user-profile";
+import Image from "next/image";
 
 export default async function Navbar() {
   const supabase = createClient();
@@ -14,8 +15,13 @@ export default async function Navbar() {
   return (
     <nav className="w-full border-b border-gray-200 bg-white py-2">
       <div className="container mx-auto px-4 flex justify-between items-center">
-        <Link href="/" prefetch className="text-xl font-bold">
-          Logo
+        <Link href="/" prefetch className="flex items-center gap-2">
+          <img
+            src="/images/leadflow-logo-with-icon.svg"
+            alt="LeadFlow"
+            width={150}
+            height={40}
+          />
         </Link>
         <div className="flex gap-4 items-center">
           {user ? (

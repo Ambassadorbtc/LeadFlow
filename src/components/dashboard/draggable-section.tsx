@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
-// import { motion } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface DraggableSectionProps {
   children: React.ReactNode;
@@ -75,20 +75,30 @@ export default function DraggableSection({
     }
   }, [position, order, isDragging, id, onPositionChange]);
 
-  // Listen for section order changes
+  // Listen for storage events to update order in real-time
   useEffect(() => {
-    const handleOrderChange = () => {
+    const handleStorageChange = () => {
       if (typeof window !== "undefined") {
-        // The order will be managed by Swapy.js now
-        // Just reset position when order changes
-        setPosition({ x: 0, y: 0 });
+        const savedOrder = localStorage.getItem(`section-order-${id}`);
+        if (savedOrder) {
+          try {
+            const parsedOrder = JSON.parse(savedOrder);
+            setOrder(parsedOrder);
+            // Reset position when order changes
+            setPosition({ x: 0, y: 0 });
+          } catch (e) {
+            console.error("Error parsing saved order", e);
+          }
+        }
       }
     };
 
-    // Listen for custom event for immediate updates
-    window.addEventListener("section-order-changed", handleOrderChange);
+    window.addEventListener("storage", handleStorageChange);
+    // Also listen for custom event for immediate updates
+    window.addEventListener("section-order-changed", handleStorageChange);
     return () => {
-      window.removeEventListener("section-order-changed", handleOrderChange);
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("section-order-changed", handleStorageChange);
     };
   }, [id]);
 

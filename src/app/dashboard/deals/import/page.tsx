@@ -2,7 +2,7 @@ import DashboardNavbar from "@/components/dashboard-navbar";
 import Sidebar from "@/components/dashboard/sidebar";
 import { redirect } from "next/navigation";
 import { createClient } from "@/app/actions";
-import ClientCSVImport from "./client-import";
+import DealsImportClient from "./client-import";
 
 export default async function ImportDealsPage() {
   const supabase = await createClient();
@@ -16,7 +16,7 @@ export default async function ImportDealsPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <DashboardNavbar />
@@ -24,109 +24,111 @@ export default async function ImportDealsPage() {
           <div className="container mx-auto px-4 py-8">
             {/* Header Section */}
             <header className="mb-8">
-              <h1 className="text-3xl font-bold">Import Deals</h1>
-              <p className="text-gray-500 mt-2">
+              <h1 className="text-3xl font-bold dark:text-white">
+                Import Deals
+              </h1>
+              <p className="text-gray-500 dark:text-gray-400 mt-2">
                 Upload a CSV file to import multiple deals at once
               </p>
             </header>
 
             {/* Import Instructions */}
-            <div className="bg-white rounded-lg shadow p-6 mb-8">
-              <h2 className="text-lg font-medium mb-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+              <h2 className="text-lg font-medium mb-4 dark:text-white">
                 CSV Format Instructions
               </h2>
-              <p className="mb-4">
+              <p className="mb-4 dark:text-gray-300">
                 Your CSV file should include the following columns:
               </p>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
                       <th
                         scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                       >
                         Column Name
                       </th>
                       <th
                         scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                       >
                         Required
                       </th>
                       <th
                         scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                       >
                         Description
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     <tr>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                         name
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         Yes
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                         The name of the deal
                       </td>
                     </tr>
                     <tr>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                         value
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         Yes
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                         The monetary value of the deal (numeric)
                       </td>
                     </tr>
                     <tr>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                         stage
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         Yes
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                         The pipeline stage (Qualification, Needs Analysis, Value
                         Proposition, etc.)
                       </td>
                     </tr>
                     <tr>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                         company
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         No
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                         The company associated with the deal
                       </td>
                     </tr>
                     <tr>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                         closing_date
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         No
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                         The expected closing date (YYYY-MM-DD format)
                       </td>
                     </tr>
                     <tr>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                         description
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         No
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                         A description of the deal
                       </td>
                     </tr>
@@ -135,8 +137,10 @@ export default async function ImportDealsPage() {
               </div>
 
               <div className="mt-6">
-                <h3 className="text-md font-medium mb-2">Example CSV:</h3>
-                <pre className="bg-gray-100 p-4 rounded-md overflow-x-auto text-sm">
+                <h3 className="text-md font-medium mb-2 dark:text-white">
+                  Example CSV:
+                </h3>
+                <pre className="bg-gray-100 dark:bg-gray-700 p-4 rounded-md overflow-x-auto text-sm dark:text-gray-300">
                   name,value,stage,company,closing_date,description
                   <br />
                   New Software Deal,10000,Qualification,Acme
@@ -152,9 +156,11 @@ export default async function ImportDealsPage() {
             </div>
 
             {/* CSV Import Form */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-medium mb-6">Upload CSV File</h2>
-              <ClientCSVImport />
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <h2 className="text-lg font-medium mb-6 dark:text-white">
+                Upload CSV File
+              </h2>
+              <DealsImportClient />
             </div>
           </div>
         </main>

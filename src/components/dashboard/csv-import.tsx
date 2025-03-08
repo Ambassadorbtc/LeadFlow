@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
-import { createClient } from "@/app/actions";
+import { createClient } from "@/supabase/client";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/use-toast";
 
 type CSVImportProps = {
   onImport: (data: any[]) => void;
@@ -17,15 +18,15 @@ type CSVImportProps = {
 export default function CSVImport({
   onImport,
   type,
-  isLoading: externalLoading = false,
+  isLoading = false,
 }: CSVImportProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(externalLoading);
   const router = useRouter();
   const supabase = createClient();
+  const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -196,6 +197,18 @@ export default function CSVImport({
 
           setSuccess(successMessage);
 
+          // Show toast notification
+          toast({
+            title: (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <span>Import Successful</span>
+              </div>
+            ),
+            description: `${uniqueRecords.length} records imported successfully.`,
+            variant: "success",
+          });
+
           // Redirect after a short delay
           setTimeout(() => {
             router.push(`/dashboard/${type}`);
@@ -215,6 +228,8 @@ export default function CSVImport({
       setIsLoading(false);
     }
   };
+
+  const [isLoading, setIsLoading] = useState(false);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">

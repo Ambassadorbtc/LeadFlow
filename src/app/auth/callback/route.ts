@@ -1,17 +1,15 @@
 import { createClient } from "@/app/actions";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const redirect_to = requestUrl.searchParams.get("redirect_to");
+  const redirectTo = requestUrl.searchParams.get("redirect_to") || "/dashboard";
 
   if (code) {
     const supabase = await createClient();
     await supabase.auth.exchangeCodeForSession(code);
   }
 
-  // URL to redirect to after sign in process completes
-  const redirectTo = redirect_to || "/dashboard";
   return NextResponse.redirect(new URL(redirectTo, requestUrl.origin));
 }

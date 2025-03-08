@@ -23,8 +23,6 @@ export async function GET(request: NextRequest) {
 
     if (leadsError) throw leadsError;
 
-    console.log(`Found ${leads?.length || 0} leads with Convert status`);
-
     let convertedCount = 0;
 
     // Process each lead
@@ -40,37 +38,29 @@ export async function GET(request: NextRequest) {
 
       // If no deal exists, create one
       if (!existingDeals || existingDeals.length === 0) {
-        console.log(`Creating deal for lead ${lead.prospect_id}`);
-
-        const { data, error: dealError } = await supabase
-          .from("deals")
-          .insert({
-            name: `${lead.business_name} Deal`,
-            value: lead.deal_value || 0,
-            stage: "Contact Made",
-            company: lead.business_name,
-            prospect_id: lead.prospect_id,
-            deal_type: lead.bf_interest
-              ? "Business Funding"
-              : lead.ct_interest
-                ? "Card Terminal"
-                : lead.ba_interest
-                  ? "Booking App"
-                  : "Other",
-            contact_name: lead.contact_name,
-            user_id: user.id,
-          })
-          .select();
+        const { error: dealError } = await supabase.from("deals").insert({
+          name: `${lead.business_name} Deal`,
+          value: lead.deal_value || 0,
+          stage: "Qualification",
+          company: lead.business_name,
+          prospect_id: lead.prospect_id,
+          deal_type: lead.bf_interest
+            ? "Business Funding"
+            : lead.ct_interest
+              ? "Card Terminal"
+              : lead.ba_interest
+                ? "Booking App"
+                : "Other",
+          contact_name: lead.contact_name,
+          user_id: user.id,
+        });
 
         if (dealError) {
           console.error(`Error creating deal: ${dealError.message}`);
           throw dealError;
         }
 
-        console.log(`Successfully created deal: ${JSON.stringify(data)}`);
         convertedCount++;
-      } else {
-        console.log(`Deal already exists for lead ${lead.prospect_id}`);
       }
     }
 

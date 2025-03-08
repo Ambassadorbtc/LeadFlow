@@ -16,16 +16,11 @@ export default async function SettingsPage() {
   }
 
   // Fetch user settings
-  const { data: settingsData } = await supabase
+  const { data: userSettings } = await supabase
     .from("user_settings")
     .select("*")
     .eq("user_id", user.id)
     .single();
-
-  // Convert to plain object to avoid serialization issues
-  const settings = settingsData
-    ? JSON.parse(JSON.stringify(settingsData))
-    : null;
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
@@ -33,7 +28,7 @@ export default async function SettingsPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <DashboardNavbar />
         <main className="flex-1 overflow-auto">
-          <SettingsClient user={user} settings={settings} />
+          <SettingsClient user={user} settings={userSettings || {}} />
         </main>
       </div>
     </div>

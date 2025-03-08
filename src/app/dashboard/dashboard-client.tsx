@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import DraggableSection from "@/components/dashboard/draggable-section";
 import DashboardContainer from "@/components/dashboard/dashboard-container";
-import DashboardSwapy from "./dashboard-swapy";
 import ResetLayoutButton from "@/components/dashboard/reset-layout-button";
 import Link from "next/link";
 import { PIPELINE_STAGES } from "@/types/schema";
@@ -40,8 +39,7 @@ export default function DashboardClient({
   dealsByStage,
 }: DashboardClientProps) {
   return (
-    <div className="px-6 py-8 max-w-[1400px] relative">
-      <DashboardSwapy />
+    <div className="px-4 py-8 max-w-[1400px] mx-auto">
       {/* Header Section */}
       <header className="mb-8 flex justify-between items-center">
         <div>
@@ -192,6 +190,12 @@ export default function DashboardClient({
                         ? 100
                         : 0;
 
+                  // Ensure we don't display NaN or Infinity
+                  const safeGrowthPercent =
+                    isNaN(growthPercent) || !isFinite(growthPercent)
+                      ? 0
+                      : growthPercent;
+
                   const isPositive = growthPercent >= 0;
 
                   return (
@@ -209,7 +213,7 @@ export default function DashboardClient({
                         }
                       >
                         {isPositive ? "+" : ""}
-                        {growthPercent.toFixed(1)}%
+                        {safeGrowthPercent.toFixed(1)}%
                       </span>
                       <span className="text-[#6b7280] ml-1">vs last month</span>
                     </>

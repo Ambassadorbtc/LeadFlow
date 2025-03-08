@@ -1,6 +1,5 @@
 import { createClient } from "@/app/actions";
 import { NextRequest, NextResponse } from "next/server";
-import { redirect } from "next/navigation";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -12,7 +11,7 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.redirect("/sign-in");
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   const id = formData.get("id") as string;
@@ -36,8 +35,6 @@ export async function POST(request: NextRequest) {
   const ba_interest =
     formData.get("ba_interest") === "on" ||
     formData.get("ba_interest") === "true";
-  // Get the redirect URL if provided
-  const redirect_url = formData.get("redirect_url") as string;
 
   // Update lead
   const { error } = await supabase
@@ -79,10 +76,16 @@ export async function POST(request: NextRequest) {
       const { error: dealError } = await supabase.from("deals").insert({
         name: `${business_name} Deal`,
         value: deal_value || 0,
-        stage: "Contact Made",
+        stage: "Qualification",
         company: business_name,
         prospect_id: prospect_id,
-        deal_type: bf_interest ? "Business Funding" : "Other",
+        deal_type: bf_interest
+          ? "Business Funding"
+          : ct_interest
+            ? "Card Terminal"
+            : ba_interest
+              ? "Booking App"
+              : "Other",
         contact_name: contact_name,
         user_id: user.id,
       });
@@ -90,13 +93,11 @@ export async function POST(request: NextRequest) {
       if (dealError) {
         console.error("Error creating deal:", dealError);
       }
-      // No redirect - we'll continue to the lead detail page
     }
-    // No redirect if deal exists - we'll continue to the lead detail page
   }
 
   // Use absolute URL with the original request's host
-  const host = request.headers.get("host");
+  const host = request.headers.get("host") || "";
   const protocol = request.headers.get("x-forwarded-proto") || "https";
   return NextResponse.redirect(`${protocol}://${host}/dashboard/leads/${id}`);
 }

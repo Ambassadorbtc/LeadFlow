@@ -1,0 +1,25 @@
+<svg width="200" height="50" viewBox="0 0 200 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Logo icon -->
+  <g transform="translate(0, 0) scale(0.5)">
+    <path d="M80 0H20C8.954 0 0 8.954 0 20V80C0 91.046 8.954 100 20 100H80C91.046 100 100 91.046 100 80V20C100 8.954 91.046 0 80 0Z" fill="#0088CC"/>
+    <path d="M80 0H20C8.954 0 0 8.954 0 20V50C0 50 20 60 50 50C80 40 100 50 100 50V20C100 8.954 91.046 0 80 0Z" fill="#0099FF"/>
+    <path d="M0 50V80C0 91.046 8.954 100 20 100H80C91.046 100 100 91.046 100 80V50C100 50 80 40 50 60C20 80 0 50 0 50Z" fill="#66CC33"/>
+    <circle cx="20" cy="30" r="8" fill="white"/>
+    <circle cx="50" cy="20" r="8" fill="white"/>
+    <circle cx="80" cy="30" r="8" fill="white"/>
+    <circle cx="30" cy="60" r="8" fill="white"/>
+    <circle cx="50" cy="80" r="8" fill="white"/>
+    <circle cx="70" cy="60" r="8" fill="white"/>
+    <circle cx="90" cy="70" r="8" fill="white"/>
+    <line x1="20" y1="30" x2="50" y2="20" stroke="white" stroke-width="3"/>
+    <line x1="50" y1="20" x2="80" y2="30" stroke="white" stroke-width="3"/>
+    <line x1="20" y1="30" x2="80" y2="30" stroke="white" stroke-width="3"/>
+    <line x1="30" y1="60" x2="50" y2="80" stroke="white" stroke-width="3"/>
+    <line x1="50" y1="80" x2="70" y2="60" stroke="white" stroke-width="3"/>
+    <line x1="70" y1="60" x2="90" y2="70" stroke="white" stroke-width="3"/>
+    <line x1="30" y1="60" x2="70" y2="60" stroke="white" stroke-width="3"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="60" y="30" font-family="Arial" font-weight="bold" font-size="24" fill="#0088CC">LeadFlow</text>
+</svg>

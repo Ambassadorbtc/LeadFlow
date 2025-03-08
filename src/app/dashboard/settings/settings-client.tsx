@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { createClient } from "@/app/actions";
-import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -16,386 +14,363 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+import { createClient } from "@/supabase/client";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/use-toast";
+import { CheckCircle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Bell,
-  Moon,
-  Sun,
+  Lock,
+  Eye,
+  EyeOff,
+  Shield,
   Palette,
   Globe,
-  Shield,
-  Database,
   Mail,
 } from "lucide-react";
-
-type SettingsClientProps = {
-  user: any;
-  settings: any;
-};
 
 export default function SettingsClient({
   user,
   settings,
-}: SettingsClientProps) {
+}: {
+  user: any;
+  settings: any;
+}) {
   const router = useRouter();
   const supabase = createClient();
-  const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
+
   const [isLoading, setIsLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
-
-  // Default settings
-  const defaultSettings = {
-    theme_preference: "system",
-    email_notifications: true,
-    lead_notifications: true,
-    deal_notifications: true,
-    task_notifications: true,
-    default_currency: "USD",
-    date_format: "MM/DD/YYYY",
-    time_format: "12h",
-    language: "en",
-    auto_refresh_dashboard: true,
-    show_deal_values: true,
-    compact_view: false,
-  };
-
-  // Form state
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    ...defaultSettings,
-    ...settings,
+    email_notifications: settings.email_notifications !== false,
+    deal_updates: settings.deal_updates !== false,
+    contact_updates: settings.contact_updates !== false,
+    marketing_emails: settings.marketing_emails !== false,
+    theme_preference: settings.theme_preference || "system",
+    default_currency: settings.default_currency || "USD",
+    default_language: settings.default_language || "en",
+    timezone: settings.timezone || "UTC",
+    date_format: settings.date_format || "MM/DD/YYYY",
+    password: "",
+    confirmPassword: "",
   });
-
-  // Update theme when theme preference changes
-  useEffect(() => {
-    if (formData.theme_preference === "system") {
-      setTheme("system");
-    } else {
-      setTheme(formData.theme_preference);
-    }
-  }, [formData.theme_preference, setTheme]);
 
   const handleSwitchChange = (name: string) => {
     setFormData((prev) => ({
       ...prev,
-      [name]: !prev[name],
+      [name]: !prev[name as keyof typeof prev],
     }));
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    // Apply theme change immediately
-    if (name === "theme_preference") {
-      setTheme(value === "system" ? "system" : value);
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const saveSettings = async () => {
+  const saveGeneralSettings = async () => {
     setIsLoading(true);
-    setSuccessMessage("");
-    setErrorMessage("");
 
     try {
-      // Save settings to database
-      const { error } = await supabase.from("user_settings").upsert({
-        user_id: user.id,
-        ...formData,
-        updated_at: new Date().toISOString(),
+      // First, ensure the user_settings table exists
+      // Skip the setup step as we've created a migration that ensures all columns exist
+      // This avoids CORS issues with edge functions
+
+      // Use the dedicated API endpoint to update settings
+      const response = await fetch("/api/settings/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
       });
 
-      if (error) throw error;
+      const result = await response.json();
 
-      setSuccessMessage("Settings saved successfully");
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update settings");
+      }
+
+      toast({
+        title: (
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <span>Saved</span>
+          </div>
+        ),
+        description: "Your settings have been updated successfully.",
+        variant: "success",
+      });
+
       router.refresh();
     } catch (error: any) {
       console.error("Error saving settings:", error);
-      setErrorMessage(error.message || "Failed to save settings");
+      toast({
+        title: "Error saving settings",
+        description: error.message,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const resetSettings = () => {
-    setFormData(defaultSettings);
+  const changePassword = async () => {
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "Please make sure your passwords match.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: formData.password,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password updated",
+        description: "Your password has been changed successfully.",
+      });
+
+      // Clear password fields
+      setFormData((prev) => ({ ...prev, password: "", confirmPassword: "" }));
+    } catch (error: any) {
+      toast({
+        title: "Error changing password",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteAccount = async () => {
+    setIsLoading(true);
+
+    try {
+      // In a real app, you would need to implement a secure way to delete user data
+      // This is a simplified example
+      const { error } = await supabase.rpc("delete_user_account", {
+        user_id: user.id,
+      });
+
+      if (error) throw error;
+
+      // Sign out the user
+      await supabase.auth.signOut();
+
+      // Redirect to home page
+      router.push("/");
+    } catch (error: any) {
+      toast({
+        title: "Error deleting account",
+        description:
+          error.message ||
+          "There was an error deleting your account. Please contact support.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 dark:text-white">Settings</h1>
+      <h1 className="text-3xl font-bold mb-6 dark:text-white">Settings</h1>
 
-      <Tabs defaultValue="appearance" className="w-full">
+      <Tabs defaultValue="general" className="w-full">
         <TabsList className="mb-6">
-          <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="preferences">Preferences</TabsTrigger>
-          <TabsTrigger value="data">Data & Privacy</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
 
-        {successMessage && (
-          <div className="mb-4 p-3 bg-green-100 text-green-800 rounded-md dark:bg-green-900/20 dark:text-green-300">
-            {successMessage}
-          </div>
-        )}
-        {errorMessage && (
-          <div className="mb-4 p-3 bg-red-100 text-red-800 rounded-md dark:bg-red-900/20 dark:text-red-300">
-            {errorMessage}
-          </div>
-        )}
+        <TabsContent value="general" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Palette className="h-5 w-5 mr-2" />
+                Appearance & Localization
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label htmlFor="theme_preference">Theme Preference</Label>
+                  <Select
+                    value={formData.theme_preference}
+                    onValueChange={(value) =>
+                      handleSelectChange("theme_preference", value)
+                    }
+                  >
+                    <SelectTrigger id="theme_preference">
+                      <SelectValue placeholder="Select theme" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="light">Light</SelectItem>
+                      <SelectItem value="dark">Dark</SelectItem>
+                      <SelectItem value="system">System</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-        <TabsContent value="appearance">
-          <Card className="p-6 dark:bg-gray-800">
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium mb-4 flex items-center dark:text-white">
-                  <Palette className="mr-2 h-5 w-5" />
-                  Theme Settings
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="theme_preference">Theme Mode</Label>
-                    <Select
-                      value={formData.theme_preference}
-                      onValueChange={(value) =>
-                        handleSelectChange("theme_preference", value)
-                      }
-                    >
-                      <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        <SelectValue placeholder="Select theme" />
-                      </SelectTrigger>
-                      <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                        <SelectItem
-                          value="light"
-                          className="dark:text-white dark:hover:bg-gray-700"
-                        >
-                          <div className="flex items-center">
-                            <Sun className="mr-2 h-4 w-4" />
-                            Light
-                          </div>
-                        </SelectItem>
-                        <SelectItem
-                          value="dark"
-                          className="dark:text-white dark:hover:bg-gray-700"
-                        >
-                          <div className="flex items-center">
-                            <Moon className="mr-2 h-4 w-4" />
-                            Dark
-                          </div>
-                        </SelectItem>
-                        <SelectItem
-                          value="system"
-                          className="dark:text-white dark:hover:bg-gray-700"
-                        >
-                          <div className="flex items-center">
-                            <div className="mr-2 h-4 w-4 flex">
-                              <Sun className="h-4 w-4 -mr-1" />
-                              <Moon className="h-4 w-4" />
-                            </div>
-                            System
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-3">
+                  <Label htmlFor="default_currency">Default Currency</Label>
+                  <Select
+                    value={formData.default_currency}
+                    onValueChange={(value) =>
+                      handleSelectChange("default_currency", value)
+                    }
+                  >
+                    <SelectTrigger id="default_currency">
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD ($)</SelectItem>
+                      <SelectItem value="EUR">EUR (€)</SelectItem>
+                      <SelectItem value="GBP">GBP (£)</SelectItem>
+                      <SelectItem value="JPY">JPY (¥)</SelectItem>
+                      <SelectItem value="CAD">CAD ($)</SelectItem>
+                      <SelectItem value="AUD">AUD ($)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="compact_view">Compact View</Label>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="compact_view"
-                        checked={formData.compact_view}
-                        onCheckedChange={() =>
-                          handleSwitchChange("compact_view")
-                        }
-                      />
-                      <Label
-                        htmlFor="compact_view"
-                        className="dark:text-gray-300"
-                      >
-                        {formData.compact_view ? "Enabled" : "Disabled"}
-                      </Label>
-                    </div>
-                  </div>
+                <div className="space-y-3">
+                  <Label htmlFor="default_language">Language</Label>
+                  <Select
+                    value={formData.default_language}
+                    onValueChange={(value) =>
+                      handleSelectChange("default_language", value)
+                    }
+                  >
+                    <SelectTrigger id="default_language">
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="es">Spanish</SelectItem>
+                      <SelectItem value="fr">French</SelectItem>
+                      <SelectItem value="de">German</SelectItem>
+                      <SelectItem value="it">Italian</SelectItem>
+                      <SelectItem value="pt">Portuguese</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="timezone">Timezone</Label>
+                  <Select
+                    value={formData.timezone}
+                    onValueChange={(value) =>
+                      handleSelectChange("timezone", value)
+                    }
+                  >
+                    <SelectTrigger id="timezone">
+                      <SelectValue placeholder="Select timezone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="UTC">UTC</SelectItem>
+                      <SelectItem value="America/New_York">
+                        Eastern Time (ET)
+                      </SelectItem>
+                      <SelectItem value="America/Chicago">
+                        Central Time (CT)
+                      </SelectItem>
+                      <SelectItem value="America/Denver">
+                        Mountain Time (MT)
+                      </SelectItem>
+                      <SelectItem value="America/Los_Angeles">
+                        Pacific Time (PT)
+                      </SelectItem>
+                      <SelectItem value="Europe/London">
+                        London (GMT)
+                      </SelectItem>
+                      <SelectItem value="Europe/Paris">Paris (CET)</SelectItem>
+                      <SelectItem value="Asia/Tokyo">Tokyo (JST)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="date_format">Date Format</Label>
+                  <Select
+                    value={formData.date_format}
+                    onValueChange={(value) =>
+                      handleSelectChange("date_format", value)
+                    }
+                  >
+                    <SelectTrigger id="date_format">
+                      <SelectValue placeholder="Select date format" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                      <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                      <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+                      <SelectItem value="DD.MM.YYYY">DD.MM.YYYY</SelectItem>
+                      <SelectItem value="YYYY/MM/DD">YYYY/MM/DD</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
-              <Separator className="dark:bg-gray-700" />
-
-              <div>
-                <h3 className="text-lg font-medium mb-4 flex items-center dark:text-white">
-                  <Globe className="mr-2 h-5 w-5" />
-                  Regional Settings
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="language">Language</Label>
-                    <Select
-                      value={formData.language}
-                      onValueChange={(value) =>
-                        handleSelectChange("language", value)
-                      }
-                    >
-                      <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        <SelectValue placeholder="Select language" />
-                      </SelectTrigger>
-                      <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                        <SelectItem
-                          value="en"
-                          className="dark:text-white dark:hover:bg-gray-700"
-                        >
-                          English
-                        </SelectItem>
-                        <SelectItem
-                          value="es"
-                          className="dark:text-white dark:hover:bg-gray-700"
-                        >
-                          Spanish
-                        </SelectItem>
-                        <SelectItem
-                          value="fr"
-                          className="dark:text-white dark:hover:bg-gray-700"
-                        >
-                          French
-                        </SelectItem>
-                        <SelectItem
-                          value="de"
-                          className="dark:text-white dark:hover:bg-gray-700"
-                        >
-                          German
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="default_currency">Default Currency</Label>
-                    <Select
-                      value={formData.default_currency}
-                      onValueChange={(value) =>
-                        handleSelectChange("default_currency", value)
-                      }
-                    >
-                      <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        <SelectValue placeholder="Select currency" />
-                      </SelectTrigger>
-                      <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                        <SelectItem
-                          value="USD"
-                          className="dark:text-white dark:hover:bg-gray-700"
-                        >
-                          USD ($)
-                        </SelectItem>
-                        <SelectItem
-                          value="EUR"
-                          className="dark:text-white dark:hover:bg-gray-700"
-                        >
-                          EUR (€)
-                        </SelectItem>
-                        <SelectItem
-                          value="GBP"
-                          className="dark:text-white dark:hover:bg-gray-700"
-                        >
-                          GBP (£)
-                        </SelectItem>
-                        <SelectItem
-                          value="JPY"
-                          className="dark:text-white dark:hover:bg-gray-700"
-                        >
-                          JPY (¥)
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="date_format">Date Format</Label>
-                    <Select
-                      value={formData.date_format}
-                      onValueChange={(value) =>
-                        handleSelectChange("date_format", value)
-                      }
-                    >
-                      <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        <SelectValue placeholder="Select date format" />
-                      </SelectTrigger>
-                      <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                        <SelectItem
-                          value="MM/DD/YYYY"
-                          className="dark:text-white dark:hover:bg-gray-700"
-                        >
-                          MM/DD/YYYY
-                        </SelectItem>
-                        <SelectItem
-                          value="DD/MM/YYYY"
-                          className="dark:text-white dark:hover:bg-gray-700"
-                        >
-                          DD/MM/YYYY
-                        </SelectItem>
-                        <SelectItem
-                          value="YYYY-MM-DD"
-                          className="dark:text-white dark:hover:bg-gray-700"
-                        >
-                          YYYY-MM-DD
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="time_format">Time Format</Label>
-                    <Select
-                      value={formData.time_format}
-                      onValueChange={(value) =>
-                        handleSelectChange("time_format", value)
-                      }
-                    >
-                      <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        <SelectValue placeholder="Select time format" />
-                      </SelectTrigger>
-                      <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
-                        <SelectItem
-                          value="12h"
-                          className="dark:text-white dark:hover:bg-gray-700"
-                        >
-                          12-hour (AM/PM)
-                        </SelectItem>
-                        <SelectItem
-                          value="24h"
-                          className="dark:text-white dark:hover:bg-gray-700"
-                        >
-                          24-hour
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+              <div className="flex justify-end">
+                <Button onClick={saveGeneralSettings} disabled={isLoading}>
+                  {isLoading ? "Saving..." : "Save Changes"}
+                </Button>
               </div>
-            </div>
+            </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="notifications">
-          <Card className="p-6 dark:bg-gray-800">
-            <div className="space-y-6">
-              <h3 className="text-lg font-medium mb-4 flex items-center dark:text-white">
-                <Bell className="mr-2 h-5 w-5" />
-                Notification Settings
-              </h3>
-
+        <TabsContent value="notifications" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Bell className="h-5 w-5 mr-2" />
+                Notification Preferences
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <Label
-                      htmlFor="email_notifications"
-                      className="text-base dark:text-white"
-                    >
+                  <div className="space-y-0.5">
+                    <Label htmlFor="email_notifications">
                       Email Notifications
                     </Label>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Receive email notifications
+                      Receive email notifications for important updates
                     </p>
                   </div>
                   <Switch
@@ -407,183 +382,172 @@ export default function SettingsClient({
                   />
                 </div>
 
-                <Separator className="dark:bg-gray-700" />
-
                 <div className="flex items-center justify-between">
-                  <div>
-                    <Label
-                      htmlFor="lead_notifications"
-                      className="text-base dark:text-white"
-                    >
-                      Lead Notifications
-                    </Label>
+                  <div className="space-y-0.5">
+                    <Label htmlFor="deal_updates">Deal Updates</Label>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Get notified about new leads
+                      Get notified about changes to your deals
                     </p>
                   </div>
                   <Switch
-                    id="lead_notifications"
-                    checked={formData.lead_notifications}
-                    onCheckedChange={() =>
-                      handleSwitchChange("lead_notifications")
-                    }
-                    disabled={!formData.email_notifications}
+                    id="deal_updates"
+                    checked={formData.deal_updates}
+                    onCheckedChange={() => handleSwitchChange("deal_updates")}
                   />
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <div>
-                    <Label
-                      htmlFor="deal_notifications"
-                      className="text-base dark:text-white"
-                    >
-                      Deal Notifications
-                    </Label>
+                  <div className="space-y-0.5">
+                    <Label htmlFor="contact_updates">Contact Updates</Label>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Get notified about deal updates
+                      Get notified about changes to your contacts
                     </p>
                   </div>
                   <Switch
-                    id="deal_notifications"
-                    checked={formData.deal_notifications}
+                    id="contact_updates"
+                    checked={formData.contact_updates}
                     onCheckedChange={() =>
-                      handleSwitchChange("deal_notifications")
-                    }
-                    disabled={!formData.email_notifications}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label
-                      htmlFor="task_notifications"
-                      className="text-base dark:text-white"
-                    >
-                      Task Notifications
-                    </Label>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Get notified about task deadlines
-                    </p>
-                  </div>
-                  <Switch
-                    id="task_notifications"
-                    checked={formData.task_notifications}
-                    onCheckedChange={() =>
-                      handleSwitchChange("task_notifications")
-                    }
-                    disabled={!formData.email_notifications}
-                  />
-                </div>
-              </div>
-            </div>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="preferences">
-          <Card className="p-6 dark:bg-gray-800">
-            <div className="space-y-6">
-              <h3 className="text-lg font-medium mb-4 flex items-center dark:text-white">
-                <Shield className="mr-2 h-5 w-5" />
-                Dashboard Preferences
-              </h3>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label
-                      htmlFor="auto_refresh_dashboard"
-                      className="text-base dark:text-white"
-                    >
-                      Auto-refresh Dashboard
-                    </Label>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Automatically refresh dashboard data
-                    </p>
-                  </div>
-                  <Switch
-                    id="auto_refresh_dashboard"
-                    checked={formData.auto_refresh_dashboard}
-                    onCheckedChange={() =>
-                      handleSwitchChange("auto_refresh_dashboard")
+                      handleSwitchChange("contact_updates")
                     }
                   />
                 </div>
 
-                <Separator className="dark:bg-gray-700" />
-
                 <div className="flex items-center justify-between">
-                  <div>
-                    <Label
-                      htmlFor="show_deal_values"
-                      className="text-base dark:text-white"
-                    >
-                      Show Deal Values
-                    </Label>
+                  <div className="space-y-0.5">
+                    <Label htmlFor="marketing_emails">Marketing Emails</Label>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Display monetary values in deal cards
+                      Receive marketing and promotional emails
                     </p>
                   </div>
                   <Switch
-                    id="show_deal_values"
-                    checked={formData.show_deal_values}
+                    id="marketing_emails"
+                    checked={formData.marketing_emails}
                     onCheckedChange={() =>
-                      handleSwitchChange("show_deal_values")
+                      handleSwitchChange("marketing_emails")
                     }
                   />
                 </div>
               </div>
-            </div>
+
+              <div className="flex justify-end">
+                <Button onClick={saveGeneralSettings} disabled={isLoading}>
+                  {isLoading ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="data">
-          <Card className="p-6 dark:bg-gray-800">
-            <div className="space-y-6">
-              <h3 className="text-lg font-medium mb-4 flex items-center dark:text-white">
-                <Database className="mr-2 h-5 w-5" />
-                Data & Privacy
-              </h3>
-
+        <TabsContent value="security" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Lock className="h-5 w-5 mr-2" />
+                Password
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div className="space-y-4">
-                <div className="p-4 bg-yellow-50 text-yellow-800 rounded-md dark:bg-yellow-900/20 dark:text-yellow-300">
-                  <p>
-                    Your data is stored securely and is never shared with third
-                    parties without your consent.
+                <div className="space-y-2">
+                  <Label htmlFor="password">New Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="Enter new password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    placeholder="Confirm new password"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  onClick={changePassword}
+                  disabled={isLoading || !formData.password}
+                >
+                  {isLoading ? "Updating..." : "Change Password"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center text-red-600 dark:text-red-400">
+                <Shield className="h-5 w-5 mr-2" />
+                Danger Zone
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="p-4 border border-red-200 dark:border-red-900 rounded-md bg-red-50 dark:bg-red-900/20">
+                  <h3 className="text-lg font-medium text-red-600 dark:text-red-400">
+                    Delete Account
+                  </h3>
+                  <p className="text-sm text-red-600/70 dark:text-red-400/70 mt-1 mb-4">
+                    Once you delete your account, there is no going back. This
+                    action cannot be undone.
                   </p>
-                </div>
 
-                <div className="flex flex-col space-y-4">
-                  <Button
-                    variant="outline"
-                    className="dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
-                  >
-                    Export All Data
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
-                  >
-                    Request Data Deletion
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive">Delete Account</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Are you absolutely sure?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently
+                          delete your account and remove all your data from our
+                          servers.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={deleteAccount}
+                          disabled={isLoading}
+                          className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          {isLoading ? "Deleting..." : "Delete Account"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
-            </div>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-
-      <div className="mt-8 flex justify-end space-x-4">
-        <Button
-          variant="outline"
-          onClick={resetSettings}
-          className="dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
-        >
-          Reset to Defaults
-        </Button>
-        <Button onClick={saveSettings} disabled={isLoading}>
-          {isLoading ? "Saving..." : "Save Settings"}
-        </Button>
-      </div>
     </div>
   );
 }

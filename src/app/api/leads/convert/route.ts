@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       const { error: dealError } = await supabase.from("deals").insert({
         name: `${lead.business_name} Deal`,
         value: lead.deal_value || 0,
-        stage: "Contact Made",
+        stage: "Qualification",
         company: lead.business_name,
         prospect_id: lead.prospect_id,
         deal_type: lead.bf_interest
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Use absolute URL with the original request's host
-    const host = request.headers.get("host");
+    const host = request.headers.get("host") || "";
     const protocol = request.headers.get("x-forwarded-proto") || "https";
     return NextResponse.redirect(
       `${protocol}://${host}/dashboard/leads/${leadId}`,

@@ -303,54 +303,69 @@ export type Database = {
         Row: {
           auto_refresh_dashboard: boolean | null
           compact_view: boolean | null
+          contact_updates: boolean | null
           created_at: string | null
           date_format: string | null
           deal_notifications: boolean | null
+          deal_updates: boolean | null
           default_currency: string | null
+          default_language: string | null
           email_notifications: boolean | null
           id: string
           language: string | null
           lead_notifications: boolean | null
+          marketing_emails: boolean | null
           show_deal_values: boolean | null
           task_notifications: boolean | null
           theme_preference: string | null
           time_format: string | null
+          timezone: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           auto_refresh_dashboard?: boolean | null
           compact_view?: boolean | null
+          contact_updates?: boolean | null
           created_at?: string | null
           date_format?: string | null
           deal_notifications?: boolean | null
+          deal_updates?: boolean | null
           default_currency?: string | null
+          default_language?: string | null
           email_notifications?: boolean | null
           id?: string
           language?: string | null
           lead_notifications?: boolean | null
+          marketing_emails?: boolean | null
           show_deal_values?: boolean | null
           task_notifications?: boolean | null
           theme_preference?: string | null
           time_format?: string | null
+          timezone?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           auto_refresh_dashboard?: boolean | null
           compact_view?: boolean | null
+          contact_updates?: boolean | null
           created_at?: string | null
           date_format?: string | null
           deal_notifications?: boolean | null
+          deal_updates?: boolean | null
           default_currency?: string | null
+          default_language?: string | null
           email_notifications?: boolean | null
           id?: string
           language?: string | null
           lead_notifications?: boolean | null
+          marketing_emails?: boolean | null
           show_deal_values?: boolean | null
           task_notifications?: boolean | null
           theme_preference?: string | null
           time_format?: string | null
+          timezone?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -359,13 +374,17 @@ export type Database = {
       users: {
         Row: {
           avatar_url: string | null
+          bio: string | null
+          company: string | null
           created_at: string
           credits: string | null
           email: string | null
           full_name: string | null
           id: string
           image: string | null
+          job_title: string | null
           name: string | null
+          phone: string | null
           subscription: string | null
           token_identifier: string
           updated_at: string | null
@@ -373,13 +392,17 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
+          company?: string | null
           created_at?: string
           credits?: string | null
           email?: string | null
           full_name?: string | null
           id: string
           image?: string | null
+          job_title?: string | null
           name?: string | null
+          phone?: string | null
           subscription?: string | null
           token_identifier: string
           updated_at?: string | null
@@ -387,13 +410,17 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
+          company?: string | null
           created_at?: string
           credits?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
           image?: string | null
+          job_title?: string | null
           name?: string | null
+          phone?: string | null
           subscription?: string | null
           token_identifier?: string
           updated_at?: string | null

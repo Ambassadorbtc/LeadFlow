@@ -3,9 +3,9 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PIPELINE_STAGES } from "@/types/schema";
-import { DollarSign, Plus, Search } from "lucide-react";
+import { DollarSign, Plus, Search, X } from "lucide-react";
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { createClient } from "@/app/actions";
+import { createClient } from "../../../../supabase/client";
 import { useRouter } from "next/navigation";
 
 type Deal = {
@@ -33,7 +33,30 @@ export const DEAL_TYPES = [
   "Other",
 ];
 
-// Note: Server functions are moved to the useEffect hook in the client component
+// Run a check for any leads that should be converted to deals
+async function checkConversions() {
+  try {
+    console.log("Checking for leads to convert...");
+    const response = await fetch("/api/leads/check-conversion", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log("Conversion check result:", result);
+    return result;
+  } catch (error) {
+    console.error("Error checking conversions:", error);
+    return null;
+  }
+}
 
 export default function PipelineClientPage({
   deals = [],
@@ -193,10 +216,10 @@ export default function PipelineClientPage({
   const stageMetrics = useMemo(() => {
     return PIPELINE_STAGES.map((stage) => {
       const stageDeals = dealsByStage[stage] || [];
-      const totalValue = stageDeals.reduce(
-        (sum, deal) => sum + Number(deal.value || 0),
-        0,
-      );
+      const totalValue = stageDeals.reduce((sum, deal) => {
+        const dealValue = Number(deal.value || 0);
+        return sum + (isNaN(dealValue) ? 0 : dealValue);
+      }, 0);
       return {
         stage,
         count: stageDeals.length,
@@ -208,12 +231,32 @@ export default function PipelineClientPage({
   return (
     <div className="px-4 py-8 w-full">
       {/* Header Section */}
-      <header className="flex justify-between items-center mb-8">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold">Pipeline</h1>
-          <p className="text-gray-500 mt-2">
-            Manage your deals through the sales pipeline
-          </p>
+          <div className="flex items-center mt-2">
+            <p className="text-gray-500 mr-4">
+              Manage your deals through the sales pipeline
+            </p>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm p-2 flex items-center w-full max-w-md">
+          <Search className="text-gray-400 h-5 w-5 ml-2 mr-1" />
+          <input
+            type="text"
+            placeholder="Search deals by name, prospect ID, company, or type..."
+            className="w-full px-2 py-2 border-none focus:outline-none focus:ring-0 text-sm"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
         <Button
           onClick={() => setShowNewDealForm(true)}
@@ -223,20 +266,6 @@ export default function PipelineClientPage({
           <span>Add Deal</span>
         </Button>
       </header>
-
-      {/* Search */}
-      <div className="bg-white rounded-lg shadow p-4 mb-8">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-          <input
-            type="text"
-            placeholder="Search deals by name, prospect ID, company, or type..."
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
 
       {/* Pipeline Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4 mb-8">

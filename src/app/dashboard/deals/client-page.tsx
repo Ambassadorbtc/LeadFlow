@@ -1,18 +1,56 @@
 "use client";
 
 import { PIPELINE_STAGES } from "@/types/schema";
-import { ClipboardList, Filter, Plus, Search } from "lucide-react";
+import {
+  ClipboardList,
+  Filter,
+  Plus,
+  Search,
+  Download,
+  CheckCircle,
+} from "lucide-react";
 import Link from "next/link";
+import { exportToCSV } from "@/utils/export-utils";
+import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
 
 export default function DealsClientPage({ deals = [] }: { deals: any[] }) {
+  const { toast } = useToast();
+
   // Get deals by stage for pipeline view
   const dealsByStage = PIPELINE_STAGES.reduce(
     (acc, stage) => {
-      acc[stage] = deals?.filter((deal) => deal.stage === stage) || [];
+      acc[stage] =
+        deals && Array.isArray(deals)
+          ? deals.filter((deal) => deal.stage === stage)
+          : [];
       return acc;
     },
     {} as Record<string, any[]>,
   );
+
+  // Export deals to CSV
+  const handleExport = () => {
+    const success = exportToCSV(deals, "deals-export.csv");
+    if (success) {
+      toast({
+        title: (
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <span>Export Successful</span>
+          </div>
+        ),
+        description: `${deals.length} deals exported successfully.`,
+        variant: "success",
+      });
+    } else {
+      toast({
+        title: "Export Failed",
+        description: "There was an error exporting your deals.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 w-full">
@@ -24,13 +62,23 @@ export default function DealsClientPage({ deals = [] }: { deals: any[] }) {
             Manage and track your sales pipeline
           </p>
         </div>
-        <Link
-          href="/dashboard/deals/add"
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="h-5 w-5" />
-          <span>Add Deal</span>
-        </Link>
+        <div className="flex gap-3">
+          <Button
+            onClick={handleExport}
+            variant="outline"
+            className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 transition-colors shadow-sm"
+          >
+            <Download className="h-5 w-5" />
+            <span>Export</span>
+          </Button>
+          <Link
+            href="/dashboard/deals/add"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="h-5 w-5" />
+            <span>Add Deal</span>
+          </Link>
+        </div>
       </header>
 
       {/* Filters */}
@@ -118,7 +166,11 @@ export default function DealsClientPage({ deals = [] }: { deals: any[] }) {
                             Value:
                           </span>
                           <span className="font-medium dark:text-white">
-                            ${Number(deal.value).toLocaleString()}
+                            $
+                            {(isNaN(Number(deal.value))
+                              ? 0
+                              : Number(deal.value)
+                            ).toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between text-sm mt-1">

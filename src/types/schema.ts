@@ -54,10 +54,13 @@ export type Lead = {
 };
 
 export const PIPELINE_STAGES = [
-  "Contact Made",
-  "Quote Sent",
+  "Qualification",
+  "Needs Analysis",
+  "Value Proposition",
+  "Proposal",
+  "Negotiation",
   "Deal Closed",
   "Deal Lost",
-] as const;
+];
 
 export type PipelineStage = (typeof PIPELINE_STAGES)[number];

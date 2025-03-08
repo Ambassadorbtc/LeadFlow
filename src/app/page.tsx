@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { createClient } from "@/app/actions";
+import Image from "next/image";
 
 export default async function Home() {
   const supabase = await createClient();
