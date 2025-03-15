@@ -10,14 +10,34 @@ export async function POST(request: NextRequest) {
     const csvFile = formData.get("csvFile") as File;
     const supabase = await createClient();
 
-    // Get current user
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // Get current user with improved error handling
+    const { data, error: authError } = await supabase.auth.getUser();
 
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    if (authError) {
+      console.error("Authentication error:", authError);
+      return NextResponse.json(
+        { error: "Authentication failed" },
+        { status: 401 },
+      );
     }
+
+    if (!data?.user) {
+      // Try to refresh the session
+      const { data: refreshData, error: refreshError } =
+        await supabase.auth.refreshSession();
+
+      if (refreshError || !refreshData?.user) {
+        console.error("Session refresh failed:", refreshError);
+        return NextResponse.json(
+          { error: "Session expired. Please sign in again." },
+          { status: 401 },
+        );
+      }
+
+      data.user = refreshData.user;
+    }
+
+    const { user } = data;
 
     if (!csvFile) {
       return NextResponse.json(

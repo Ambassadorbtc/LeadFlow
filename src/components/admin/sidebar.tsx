@@ -9,6 +9,7 @@ import {
   Settings,
   LogOut,
   Server,
+  Wrench,
 } from "lucide-react";
 import { createClient } from "@/supabase/client";
 
@@ -41,6 +42,11 @@ export default function AdminSidebar() {
       name: "Deployment",
       href: "/admin/deployment",
       icon: <Server className="h-5 w-5" />,
+    },
+    {
+      name: "Fix Deployment",
+      href: "/admin/deployment/fix-all",
+      icon: <Wrench className="h-5 w-5" />,
     },
     {
       name: "Settings",

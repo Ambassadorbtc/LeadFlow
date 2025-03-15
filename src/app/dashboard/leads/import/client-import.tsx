@@ -15,10 +15,30 @@ export default function LeadsImportClient() {
   const handleImport = async (data: any[]) => {
     setIsLoading(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: userData, error: authError } =
+        await supabase.auth.getUser();
 
-      if (!userData.user) {
-        throw new Error("User not authenticated");
+      if (authError) {
+        console.error("Authentication error:", authError);
+        throw new Error("Authentication failed. Please sign in again.");
+      }
+
+      if (!userData?.user) {
+        // Try to refresh the session before giving up
+        const { data: refreshData, error: refreshError } =
+          await supabase.auth.refreshSession();
+
+        if (refreshError || !refreshData?.user) {
+          console.error("Session refresh failed:", refreshError);
+          // Redirect to sign-in page
+          router.push(
+            "/sign-in?error=Your session has expired. Please sign in again.",
+          );
+          return;
+        }
+
+        // Use the refreshed user data
+        userData.user = refreshData.user;
       }
 
       // Process and validate the data using the mapper function
@@ -27,13 +47,17 @@ export default function LeadsImportClient() {
       // Insert the data into the leads table
       const { error } = await supabase.from("leads").insert(processedData);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Database error:", error);
+        throw error;
+      }
 
       // Redirect to the leads page after successful import
       router.push("/dashboard/leads");
       router.refresh();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error importing leads:", error);
+      alert(error?.message || "Failed to import leads. Please try again.");
     } finally {
       setIsLoading(false);
     }
