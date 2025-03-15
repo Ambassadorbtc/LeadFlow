@@ -4,6 +4,7 @@ import CSVImport from "@/components/dashboard/csv-import";
 import { createClient } from "@/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { mapCSVToLeads } from "./csv-parser";
 
 export default function LeadsImportClient() {
   const router = useRouter();
