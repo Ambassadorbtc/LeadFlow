@@ -38,9 +38,7 @@ import {
   Palette,
   Globe,
   Mail,
-  LogOut,
 } from "lucide-react";
-import { signOutAction } from "@/app/actions/auth-actions";
 
 export default function SettingsClient({
   user,
@@ -347,17 +345,7 @@ export default function SettingsClient({
                 </div>
               </div>
 
-              <div className="flex justify-between">
-                <form action={signOutAction}>
-                  <Button
-                    variant="destructive"
-                    type="submit"
-                    className="flex items-center gap-2"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                  </Button>
-                </form>
+              <div className="flex justify-end">
                 <Button onClick={saveGeneralSettings} disabled={isLoading}>
                   {isLoading ? "Saving..." : "Save Changes"}
                 </Button>

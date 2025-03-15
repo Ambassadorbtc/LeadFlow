@@ -12,7 +12,12 @@ import {
   Check,
   CheckCircle,
   Download,
+  Trash2,
 } from "lucide-react";
+import {
+  ResizableHeader,
+  ResizableTable,
+} from "@/components/ui/resizable-table";
 import Link from "next/link";
 import LeadCommentCell from "@/components/dashboard/lead-comment-cell";
 import { useState, useEffect } from "react";
@@ -55,6 +60,8 @@ export default function LeadsClientPage({
   const [filteredLeads, setFilteredLeads] = useState(initialLeads);
   const [leads, setLeads] = useState(initialLeads);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Status options for filtering
   const statusOptions = [
@@ -118,27 +125,31 @@ export default function LeadsClientPage({
 
   // Update URL with search params
   const updateSearchParams = (params: Record<string, string>) => {
-    const url = new URL(window.location.href);
+    const newParams = new URLSearchParams(searchParams.toString());
 
     // Update or add each parameter
     Object.entries(params).forEach(([key, value]) => {
       if (value) {
-        url.searchParams.set(key, value);
+        newParams.set(key, value);
       } else {
-        url.searchParams.delete(key);
+        newParams.delete(key);
       }
     });
 
-    // Replace the current URL without reloading the page
-    window.history.pushState({}, "", url.toString());
-    router.refresh();
+    // Create the new URL and navigate
+    const url = `${window.location.pathname}?${newParams.toString()}`;
+    router.push(url, { scroll: false });
   };
 
   // Handle search input
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
-    updateSearchParams({ search: value });
+    // Debounce search parameter update
+    const timer = setTimeout(() => {
+      updateSearchParams({ search: value });
+    }, 300);
+    return () => clearTimeout(timer);
   };
 
   // Handle status filter change
@@ -175,6 +186,83 @@ export default function LeadsClientPage({
       sort: "created_at",
       order: "desc",
     });
+  };
+
+  // Handle lead selection
+  const handleSelectLead = (leadId: string, isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedLeads((prev) => [...prev, leadId]);
+    } else {
+      setSelectedLeads((prev) => prev.filter((id) => id !== leadId));
+    }
+  };
+
+  // Handle select all leads
+  const handleSelectAll = (isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedLeads(filteredLeads.map((lead) => lead.id));
+    } else {
+      setSelectedLeads([]);
+    }
+  };
+
+  // Delete selected leads
+  const handleDeleteSelected = async () => {
+    if (selectedLeads.length === 0) return;
+
+    if (
+      !confirm(
+        `Are you sure you want to delete ${selectedLeads.length} lead${selectedLeads.length > 1 ? "s" : ""}?`,
+      )
+    ) {
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      const response = await fetch("/api/leads/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ leadIds: selectedLeads }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: (
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <span>Deletion Successful</span>
+            </div>
+          ),
+          description: `${result.deletedCount} lead${result.deletedCount > 1 ? "s" : ""} deleted successfully.`,
+          variant: "success",
+        });
+
+        // Refresh leads
+        setSelectedLeads([]);
+        fetchLeads();
+      } else {
+        toast({
+          title: "Deletion Failed",
+          description: result.error || "There was an error deleting the leads.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting leads:", error);
+      toast({
+        title: "Deletion Failed",
+        description: "There was an error deleting the leads.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // Export leads to CSV
@@ -242,21 +330,39 @@ export default function LeadsClientPage({
           )}
         </div>
         <div className="flex gap-3 flex-wrap">
-          <Button
-            onClick={handleExport}
-            variant="outline"
-            className="bg-white dark:bg-gray-800 border border-[#e5e7eb] dark:border-gray-700 text-[#4b5563] dark:text-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
-          >
-            <Download className="h-5 w-5" />
-            <span>Export</span>
-          </Button>
-          <a
-            href="/dashboard/leads/import"
-            className="bg-white dark:bg-gray-800 border border-[#e5e7eb] dark:border-gray-700 text-[#4b5563] dark:text-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
-          >
-            <Plus className="h-5 w-5" />
-            <span>Import Leads</span>
-          </a>
+          {selectedLeads.length > 0 ? (
+            <Button
+              onClick={handleDeleteSelected}
+              variant="destructive"
+              disabled={isDeleting}
+              className="px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm"
+            >
+              <Trash2 className="h-5 w-5" />
+              <span>
+                {isDeleting
+                  ? "Deleting..."
+                  : `Delete (${selectedLeads.length})`}
+              </span>
+            </Button>
+          ) : (
+            <>
+              <Button
+                onClick={handleExport}
+                variant="outline"
+                className="bg-white dark:bg-gray-800 border border-[#e5e7eb] dark:border-gray-700 text-[#4b5563] dark:text-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+              >
+                <Download className="h-5 w-5" />
+                <span>Export</span>
+              </Button>
+              <a
+                href="/dashboard/leads/import"
+                className="bg-white dark:bg-gray-800 border border-[#e5e7eb] dark:border-gray-700 text-[#4b5563] dark:text-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+              >
+                <Plus className="h-5 w-5" />
+                <span>Import Leads</span>
+              </a>
+            </>
+          )}
           <Link
             href="/dashboard/leads/add"
             className="bg-[#4f46e5] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#4338ca] transition-colors shadow-sm"
@@ -394,284 +500,309 @@ export default function LeadsClientPage({
       {/* Leads List */}
       {!isLoading && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-auto">
-          <div>
-            <table className="w-full divide-y divide-[#f3f4f6] text-sm">
-              <thead className="bg-[#f9fafb] dark:bg-gray-700">
-                <tr>
-                  <th
-                    scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider hidden md:table-cell cursor-pointer group"
-                    onClick={() => handleSortChange("prospect_id")}
-                  >
-                    <div className="flex items-center">
-                      Prospect ID
-                      {sortField === "prospect_id" && (
-                        <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider cursor-pointer group"
-                    onClick={() => handleSortChange("business_name")}
-                  >
-                    <div className="flex items-center">
-                      Business
-                      {sortField === "business_name" && (
-                        <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider cursor-pointer group"
-                    onClick={() => handleSortChange("contact_name")}
-                  >
-                    <div className="flex items-center">
-                      Contact
-                      {sortField === "contact_name" && (
-                        <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell cursor-pointer group"
-                    onClick={() => handleSortChange("contact_email")}
-                  >
-                    <div className="flex items-center">
-                      Email
-                      {sortField === "contact_email" && (
-                        <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell"
-                  >
-                    Phone
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider cursor-pointer group"
-                    onClick={() => handleSortChange("status")}
-                  >
-                    <div className="flex items-center">
-                      Status
-                      {sortField === "status" && (
-                        <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider hidden md:table-cell cursor-pointer group"
-                    onClick={() => handleSortChange("owner")}
-                  >
-                    <div className="flex items-center">
-                      Owner
-                      {sortField === "owner" && (
-                        <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider cursor-pointer group"
-                    onClick={() => handleSortChange("deal_value")}
-                  >
-                    <div className="flex items-center">
-                      Deal Value
-                      {sortField === "deal_value" && (
-                        <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider hidden md:table-cell cursor-pointer group"
-                    onClick={() => handleSortChange("created_at")}
-                  >
-                    <div className="flex items-center">
-                      Created
-                      {sortField === "created_at" && (
-                        <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider whitespace-nowrap sm:table-cell"
-                  >
-                    Comment
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider"
-                  >
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-[#f3f4f6] dark:divide-gray-700">
-                {filteredLeads && filteredLeads.length > 0 ? (
-                  filteredLeads.map((lead) => (
-                    <tr
-                      key={lead.id}
-                      className="hover:bg-[#f9fafb] dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                      onClick={() =>
-                        (window.location.href = `/dashboard/leads/${lead.id}`)
+          <ResizableTable>
+            <thead className="bg-[#f9fafb] dark:bg-gray-700">
+              <tr>
+                <th
+                  scope="col"
+                  className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider"
+                >
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      checked={
+                        selectedLeads.length > 0 &&
+                        selectedLeads.length === filteredLeads.length
                       }
-                    >
-                      <td className="px-2 py-1 whitespace-nowrap hidden md:table-cell">
-                        <div className="text-xs font-medium text-[#111827] dark:text-white">
-                          {lead.prospect_id}
-                        </div>
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <Link
-                            href={`/dashboard/companies?name=${encodeURIComponent(lead.business_name)}`}
-                            className="flex-shrink-0 h-6 w-6 flex items-center justify-center rounded-full bg-[#f3f4f6] dark:bg-gray-700 text-[#6b7280] dark:text-gray-400 hover:bg-[#e5e7eb] dark:hover:bg-gray-600"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Building2 className="h-3 w-3" />
-                          </Link>
-                          <div className="ml-1">
-                            <div className="text-xs font-medium text-[#111827] dark:text-white">
-                              {lead.business_name}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <Link
-                            href={`/dashboard/contacts?name=${encodeURIComponent(lead.contact_name)}`}
-                            className="flex-shrink-0 h-6 w-6 flex items-center justify-center rounded-full bg-[#eef2ff] dark:bg-indigo-900/30 text-[#4f46e5] dark:text-indigo-300 hover:bg-[#e0e7ff] dark:hover:bg-indigo-900/50"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <UserCircle className="h-3 w-3" />
-                          </Link>
-                          <div className="ml-1">
-                            <div className="text-xs font-medium text-[#111827] dark:text-white">
-                              {lead.contact_name}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap hidden lg:table-cell">
-                        <div className="text-xs text-[#4b5563] dark:text-gray-400">
-                          {lead.contact_email || "-"}
-                        </div>
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap hidden lg:table-cell">
-                        <div className="text-xs text-[#4b5563] dark:text-gray-400">
-                          {lead.phone || "-"}
-                        </div>
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        {lead.status === "New" ? (
-                          <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-medium rounded-full bg-[#dbeafe] dark:bg-blue-900/30 text-[#1e40af] dark:text-blue-300">
-                            New
-                          </span>
-                        ) : lead.status === "Prospect" ? (
-                          <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-medium rounded-full bg-[#f3e8ff] dark:bg-purple-900/30 text-[#6b21a8] dark:text-purple-300">
-                            Prospect
-                          </span>
-                        ) : lead.status === "Convert" ? (
-                          <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-medium rounded-full bg-[#dcfce7] dark:bg-green-900/30 text-[#166534] dark:text-green-300">
-                            Convert
-                          </span>
-                        ) : (
-                          <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-medium rounded-full bg-[#f3f4f6] dark:bg-gray-700 text-[#4b5563] dark:text-gray-300">
-                            {lead.status || "New"}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap hidden md:table-cell">
-                        {lead.owner ? (
-                          <Link
-                            href={`/dashboard/leads?owner=${encodeURIComponent(lead.owner)}`}
-                            className="text-xs text-[#4f46e5] hover:underline inline-block"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {lead.owner}
-                          </Link>
-                        ) : (
-                          <div className="text-xs text-[#9ca3af] dark:text-gray-500">
-                            -
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        <div className="text-xs font-medium text-[#111827] dark:text-white">
-                          {lead.deal_value
-                            ? `${(isNaN(Number(lead.deal_value)) ? 0 : Number(lead.deal_value)).toLocaleString()}`
-                            : "-"}
-                        </div>
-                        <div className="text-xs">
-                          {lead.bf_interest && (
-                            <span className="text-[#4f46e5] mr-1">BF</span>
-                          )}
-                          {lead.ct_interest && (
-                            <span className="text-[#10b981] mr-1">CT</span>
-                          )}
-                          {lead.ba_interest && (
-                            <span className="text-[#8b5cf6]">BA</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap text-xs text-[#6b7280] hidden md:table-cell">
-                        {new Date(
-                          lead.created_at || new Date(),
-                        ).toLocaleDateString()}
-                      </td>
-                      <td className="px-2 py-1 min-w-[250px] sm:table-cell">
-                        <LeadCommentCell leadId={lead.id} />
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap text-right">
-                        <button
-                          className="text-[#6b7280] hover:text-[#111827]"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Add action menu functionality here
-                          }}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                    />
+                  </div>
+                  <div className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-blue-500 hover:opacity-100 transition-opacity" />
+                </th>
+                <ResizableHeader
+                  className="hidden md:table-cell cursor-pointer group"
+                  onClick={() => handleSortChange("prospect_id")}
+                >
+                  Prospect ID
+                  {sortField === "prospect_id" && (
+                    <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
+                  )}
+                </ResizableHeader>
+                <ResizableHeader
+                  className="cursor-pointer group"
+                  onClick={() => handleSortChange("business_name")}
+                >
+                  Business
+                  {sortField === "business_name" && (
+                    <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
+                  )}
+                </ResizableHeader>
+                <ResizableHeader
+                  className="cursor-pointer group"
+                  onClick={() => handleSortChange("contact_name")}
+                >
+                  Contact
+                  {sortField === "contact_name" && (
+                    <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
+                  )}
+                </ResizableHeader>
+                <ResizableHeader
+                  className="hidden lg:table-cell cursor-pointer group"
+                  onClick={() => handleSortChange("contact_email")}
+                >
+                  Email
+                  {sortField === "contact_email" && (
+                    <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
+                  )}
+                </ResizableHeader>
+                <ResizableHeader className="hidden lg:table-cell">
+                  Phone
+                </ResizableHeader>
+                <ResizableHeader
+                  className="cursor-pointer group"
+                  onClick={() => handleSortChange("status")}
+                >
+                  Status
+                  {sortField === "status" && (
+                    <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
+                  )}
+                </ResizableHeader>
+                <ResizableHeader
+                  className="hidden md:table-cell cursor-pointer group"
+                  onClick={() => handleSortChange("owner")}
+                >
+                  Owner
+                  {sortField === "owner" && (
+                    <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
+                  )}
+                </ResizableHeader>
+                <ResizableHeader
+                  className="cursor-pointer group"
+                  onClick={() => handleSortChange("deal_value")}
+                >
+                  Deal Value
+                  {sortField === "deal_value" && (
+                    <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
+                  )}
+                </ResizableHeader>
+                <ResizableHeader
+                  className="hidden md:table-cell cursor-pointer group"
+                  onClick={() => handleSortChange("created_at")}
+                >
+                  Created
+                  {sortField === "created_at" && (
+                    <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
+                  )}
+                </ResizableHeader>
+                <ResizableHeader className="whitespace-nowrap sm:table-cell">
+                  Comment
+                </ResizableHeader>
+                <th
+                  scope="col"
+                  className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider"
+                >
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-[#f3f4f6] dark:divide-gray-700">
+              {filteredLeads && filteredLeads.length > 0 ? (
+                filteredLeads.map((lead) => (
+                  <tr
+                    key={lead.id}
+                    className="hover:bg-[#f9fafb] dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                  >
+                    <td className="px-2 py-1 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          checked={selectedLeads.includes(lead.id)}
+                          onChange={(e) =>
+                            handleSelectLead(lead.id, e.target.checked)
+                          }
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    </td>
                     <td
-                      colSpan={11}
-                      className="px-6 py-10 text-center text-[#6b7280] dark:text-gray-400"
+                      className="px-2 py-1 whitespace-nowrap hidden md:table-cell"
+                      onClick={() => router.push(`/dashboard/leads/${lead.id}`)}
                     >
-                      {leads.length > 0 ? (
-                        <>
-                          No leads match your search criteria.{" "}
-                          <button
-                            onClick={clearFilters}
-                            className="text-blue-600 dark:text-blue-400 hover:underline"
-                          >
-                            Clear filters
-                          </button>
-                        </>
+                      <div className="text-xs font-medium text-[#111827] dark:text-white">
+                        {lead.prospect_id}
+                      </div>
+                    </td>
+                    <td
+                      className="px-2 py-1 whitespace-nowrap"
+                      onClick={() => router.push(`/dashboard/leads/${lead.id}`)}
+                    >
+                      <div className="flex items-center">
+                        <Link
+                          href={`/dashboard/companies?name=${encodeURIComponent(lead.business_name)}`}
+                          className="flex-shrink-0 h-6 w-6 flex items-center justify-center rounded-full bg-[#f3f4f6] dark:bg-gray-700 text-[#6b7280] dark:text-gray-400 hover:bg-[#e5e7eb] dark:hover:bg-gray-600"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Building2 className="h-3 w-3" />
+                        </Link>
+                        <div className="ml-1">
+                          <div className="text-xs font-medium text-[#111827] dark:text-white">
+                            {lead.business_name}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td
+                      className="px-2 py-1 whitespace-nowrap"
+                      onClick={() => router.push(`/dashboard/leads/${lead.id}`)}
+                    >
+                      <div className="flex items-center">
+                        <Link
+                          href={`/dashboard/contacts?name=${encodeURIComponent(lead.contact_name)}`}
+                          className="flex-shrink-0 h-6 w-6 flex items-center justify-center rounded-full bg-[#eef2ff] dark:bg-indigo-900/30 text-[#4f46e5] dark:text-indigo-300 hover:bg-[#e0e7ff] dark:hover:bg-indigo-900/50"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <UserCircle className="h-3 w-3" />
+                        </Link>
+                        <div className="ml-1">
+                          <div className="text-xs font-medium text-[#111827] dark:text-white">
+                            {lead.contact_name}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td
+                      className="px-2 py-1 whitespace-nowrap hidden lg:table-cell"
+                      onClick={() => router.push(`/dashboard/leads/${lead.id}`)}
+                    >
+                      <div className="text-xs text-[#4b5563] dark:text-gray-400">
+                        {lead.contact_email || "-"}
+                      </div>
+                    </td>
+                    <td
+                      className="px-2 py-1 whitespace-nowrap hidden lg:table-cell"
+                      onClick={() => router.push(`/dashboard/leads/${lead.id}`)}
+                    >
+                      <div className="text-xs text-[#4b5563] dark:text-gray-400">
+                        {lead.phone || "-"}
+                      </div>
+                    </td>
+                    <td
+                      className="px-2 py-1 whitespace-nowrap"
+                      onClick={() => router.push(`/dashboard/leads/${lead.id}`)}
+                    >
+                      {lead.status === "New" ? (
+                        <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-medium rounded-full bg-[#dbeafe] dark:bg-blue-900/30 text-[#1e40af] dark:text-blue-300">
+                          New
+                        </span>
+                      ) : lead.status === "Prospect" ? (
+                        <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-medium rounded-full bg-[#f3e8ff] dark:bg-purple-900/30 text-[#6b21a8] dark:text-purple-300">
+                          Prospect
+                        </span>
+                      ) : lead.status === "Convert" ? (
+                        <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-medium rounded-full bg-[#dcfce7] dark:bg-green-900/30 text-[#166534] dark:text-green-300">
+                          Convert
+                        </span>
                       ) : (
-                        <>
-                          No leads found. Import or add your first lead to get
-                          started.
-                        </>
+                        <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-medium rounded-full bg-[#f3f4f6] dark:bg-gray-700 text-[#4b5563] dark:text-gray-300">
+                          {lead.status || "New"}
+                        </span>
                       )}
                     </td>
+                    <td
+                      className="px-2 py-1 whitespace-nowrap hidden md:table-cell"
+                      onClick={() => router.push(`/dashboard/leads/${lead.id}`)}
+                    >
+                      {lead.owner ? (
+                        <Link
+                          href={`/dashboard/leads?owner=${encodeURIComponent(lead.owner)}`}
+                          className="text-xs text-[#4f46e5] hover:underline inline-block"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {lead.owner}
+                        </Link>
+                      ) : (
+                        <div className="text-xs text-[#9ca3af] dark:text-gray-500">
+                          -
+                        </div>
+                      )}
+                    </td>
+                    <td
+                      className="px-2 py-1 whitespace-nowrap"
+                      onClick={() => router.push(`/dashboard/leads/${lead.id}`)}
+                    >
+                      <div className="text-xs font-medium text-[#111827] dark:text-white">
+                        {lead.deal_value
+                          ? `${(isNaN(Number(lead.deal_value)) ? 0 : Number(lead.deal_value)).toLocaleString()}`
+                          : "-"}
+                      </div>
+                      <div className="text-xs">
+                        {lead.bf_interest && (
+                          <span className="text-[#4f46e5] mr-1">BF</span>
+                        )}
+                        {lead.ct_interest && (
+                          <span className="text-[#10b981] mr-1">CT</span>
+                        )}
+                        {lead.ba_interest && (
+                          <span className="text-[#8b5cf6]">BA</span>
+                        )}
+                      </div>
+                    </td>
+                    <td
+                      className="px-2 py-1 whitespace-nowrap text-xs text-[#6b7280] hidden md:table-cell"
+                      onClick={() => router.push(`/dashboard/leads/${lead.id}`)}
+                    >
+                      {new Date(
+                        lead.created_at || new Date(),
+                      ).toLocaleDateString()}
+                    </td>
+                    <td
+                      className="px-2 py-1 min-w-[250px] sm:table-cell"
+                      onClick={() => router.push(`/dashboard/leads/${lead.id}`)}
+                    >
+                      <LeadCommentCell leadId={lead.id} />
+                    </td>
+                    <td className="px-2 py-1 whitespace-nowrap text-right">
+                      <button
+                        className="text-[#6b7280] hover:text-[#111827]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Add action menu functionality here
+                        }}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+                    </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={12}
+                    className="px-6 py-10 text-center text-[#6b7280] dark:text-gray-400"
+                  >
+                    {leads.length > 0 ? (
+                      <>
+                        No leads match your search criteria.{" "}
+                        <button
+                          onClick={clearFilters}
+                          className="text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          Clear filters
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        No leads found. Import or add your first lead to get
+                        started.
+                      </>
+                    )}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </ResizableTable>
         </div>
       )}
     </div>

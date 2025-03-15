@@ -1,10 +1,10 @@
+import { createClient } from "@/app/actions";
+import { redirect } from "next/navigation";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import Sidebar from "@/components/dashboard/sidebar";
-import { redirect } from "next/navigation";
-import { createClient } from "@/app/actions";
-import SettingsClient from "./settings-client";
+import NotificationsClient from "./notifications-client";
 
-export default async function SettingsPage() {
+export default async function NotificationsPage() {
   const supabase = await createClient();
 
   const {
@@ -15,12 +15,12 @@ export default async function SettingsPage() {
     return redirect("/sign-in");
   }
 
-  // Fetch user settings
-  const { data: userSettings } = await supabase
-    .from("user_settings")
+  // Fetch notifications from the database
+  const { data: notifications } = await supabase
+    .from("notifications")
     .select("*")
     .eq("user_id", user.id)
-    .single();
+    .order("created_at", { ascending: false });
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
@@ -28,7 +28,10 @@ export default async function SettingsPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <DashboardNavbar />
         <main className="flex-1 overflow-auto">
-          <SettingsClient user={user} settings={userSettings || {}} />
+          <NotificationsClient
+            user={user}
+            notifications={notifications || []}
+          />
         </main>
       </div>
     </div>

@@ -14,7 +14,6 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { signOutAction } from "@/app/actions/auth-actions";
 import { createClient } from "@/supabase/client";
 
 type SidebarItem = {
@@ -84,15 +83,16 @@ export default function Sidebar() {
         </ul>
       </nav>
       <div className="mt-auto pb-4 flex justify-center">
-        <form action={signOutAction}>
-          <button
-            type="submit"
-            className="p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 transition-colors"
-            title="Sign Out"
-          >
-            <LogOut className="h-5 w-5" />
-          </button>
-        </form>
+        <button
+          onClick={async () => {
+            const { error } = await supabase.auth.signOut();
+            if (!error) router.push("/sign-in");
+          }}
+          className="p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 transition-colors"
+          title="Sign Out"
+        >
+          <LogOut className="h-5 w-5" />
+        </button>
       </div>
     </div>
   );

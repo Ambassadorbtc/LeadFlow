@@ -1,9 +1,9 @@
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
+  const res = NextResponse.next();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,26 +14,34 @@ export async function middleware(req: NextRequest) {
           return req.cookies.getAll().map(({ name, value }) => ({
             name,
             value,
-          }))
+          }));
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            req.cookies.set(name, value)
-            res.cookies.set(name, value, options)
-          })
+            req.cookies.set(name, value);
+            res.cookies.set(name, value, options);
+          });
         },
       },
+    },
+  );
+
+  try {
+    // Refresh session if expired - required for Server Components
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error) {
+      console.error("Auth session error:", error);
     }
-  )
-
-  // Refresh session if expired - required for Server Components
-  const { data: { session }, error } = await supabase.auth.getSession()
-
-  if (error) {
-    console.error('Auth session error:', error)
+  } catch (error) {
+    console.error("Middleware session error:", error);
+    // Continue with the request even if there's an error
   }
 
-  return res
+  return res;
 }
 
 // Ensure the middleware is only called for relevant paths
@@ -46,6 +54,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public (public files)
      */
-    '/((?!_next/static|_next/image|favicon.ico|public|api).*)',
+    "/((?!_next/static|_next/image|favicon.ico|public|api).*)",
   ],
-}
+};

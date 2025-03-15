@@ -3,7 +3,6 @@ import Sidebar from "@/components/dashboard/sidebar";
 import { redirect } from "next/navigation";
 import { createClient } from "@/app/actions";
 import ProfileClient from "./profile-client";
-import { Suspense } from "react";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -42,13 +41,7 @@ export default async function ProfilePage() {
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Suspense
-          fallback={
-            <div className="h-14 border-b border-gray-200 dark:border-gray-800"></div>
-          }
-        >
-          <DashboardNavbar />
-        </Suspense>
+        <DashboardNavbar />
         <main className="flex-1 overflow-auto">
           <ProfileClient
             user={user}

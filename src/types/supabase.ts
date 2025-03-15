@@ -382,6 +382,8 @@ export type Database = {
           full_name: string | null
           id: string
           image: string | null
+          is_admin: boolean | null
+          is_blocked: boolean | null
           job_title: string | null
           name: string | null
           phone: string | null
@@ -400,6 +402,8 @@ export type Database = {
           full_name?: string | null
           id: string
           image?: string | null
+          is_admin?: boolean | null
+          is_blocked?: boolean | null
           job_title?: string | null
           name?: string | null
           phone?: string | null
@@ -418,6 +422,8 @@ export type Database = {
           full_name?: string | null
           id?: string
           image?: string | null
+          is_admin?: boolean | null
+          is_blocked?: boolean | null
           job_title?: string | null
           name?: string | null
           phone?: string | null
@@ -433,7 +439,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      exec_sql: {
+        Args: {
+          sql_query: string
+        }
+        Returns: Json
+      }
+      get_total_deal_value: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
