@@ -14,12 +14,15 @@ const nextConfig = {
   experimental: {
     forceSwcTransforms: true,
   },
+  // Properly handle error pages in a hybrid setup
+  pageExtensions: ["tsx", "ts", "jsx", "js"],
 };
 
 if (process.env.NEXT_PUBLIC_TEMPO) {
-  nextConfig.experimental.swcPlugins = [
-    [require.resolve("tempo-devtools/swc/0.90"), {}],
-  ];
+  nextConfig.experimental = {
+    ...nextConfig.experimental,
+    swcPlugins: [[require.resolve("tempo-devtools/swc/0.90"), {}]],
+  };
 }
 
 module.exports = nextConfig;

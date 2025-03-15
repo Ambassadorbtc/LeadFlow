@@ -112,12 +112,16 @@ export default function DashboardNavbar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/profile">Profile</Link>
+                <Link href="/dashboard/profile" className="w-full">
+                  Profile
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/settings">Settings</Link>
+                <Link href="/dashboard/settings" className="w-full">
+                  Settings
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
+              <DropdownMenuItem>
                 <form
                   action={async () => {
                     const result = await signOutServerAction();
@@ -125,11 +129,9 @@ export default function DashboardNavbar() {
                       window.location.href = "/sign-in";
                     }
                   }}
+                  className="w-full"
                 >
-                  <button
-                    type="submit"
-                    className="w-full text-left px-2 py-1.5 text-sm"
-                  >
+                  <button type="submit" className="w-full text-left">
                     Sign out
                   </button>
                 </form>

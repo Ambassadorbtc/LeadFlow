@@ -3,14 +3,16 @@ import { FormMessage, Message } from "@/components/form-message";
 import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield } from "lucide-react";
 import Link from "next/link";
+import { Shield } from "lucide-react";
 
-interface LoginProps {
+interface AdminLoginProps {
   searchParams: { [key: string]: string | string[] | undefined };
 }
 
-export default async function SignInPage({ searchParams }: LoginProps) {
+export default async function AdminLoginPage({
+  searchParams,
+}: AdminLoginProps) {
   const message = searchParams.error
     ? { error: searchParams.error as string }
     : searchParams.success
@@ -33,19 +35,17 @@ export default async function SignInPage({ searchParams }: LoginProps) {
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
       <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-sm">
         <div className="mb-6 flex justify-center">
-          <img
-            src="/images/leadflow-icon.svg"
-            alt="LeadFlow"
-            className="h-16 w-16"
-          />
+          <div className="rounded-full bg-blue-100 p-3 dark:bg-blue-900/30">
+            <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          </div>
         </div>
         <form className="flex flex-col space-y-6" method="post">
           <div className="space-y-2 text-center">
             <h1 className="text-3xl font-semibold tracking-tight">
-              Welcome to LeadFlow
+              Admin Login
             </h1>
             <p className="text-sm text-muted-foreground">
-              Sign in to access your CRM dashboard
+              Enter your admin credentials to access the control panel
             </p>
           </div>
 
@@ -58,7 +58,8 @@ export default async function SignInPage({ searchParams }: LoginProps) {
                 id="email"
                 name="email"
                 type="email"
-                placeholder="ibbysj@gmail.com"
+                placeholder="admin@leadflowapp.online"
+                defaultValue="admin@leadflowapp.online"
                 required
                 className="w-full"
               />
@@ -81,6 +82,7 @@ export default async function SignInPage({ searchParams }: LoginProps) {
                 type="password"
                 name="password"
                 placeholder="Your password"
+                defaultValue="admin123"
                 required
                 className="w-full"
               />
@@ -88,26 +90,19 @@ export default async function SignInPage({ searchParams }: LoginProps) {
           </div>
 
           <SubmitButton
-            className="w-full bg-blue-600 hover:bg-blue-700"
+            className="w-full"
             pendingText="Signing in..."
             formAction={signInAction}
           >
-            Sign in
+            Sign in to Admin Panel
           </SubmitButton>
 
-          <div className="flex justify-between items-center">
+          <div className="text-center">
             <Link
-              href="/sign-up"
+              href="/sign-in"
               className="text-sm text-muted-foreground hover:text-foreground hover:underline transition-all"
             >
-              Don't have an account? Sign up
-            </Link>
-            <Link
-              href="/admin-login"
-              className="flex items-center text-sm text-muted-foreground hover:text-foreground hover:underline transition-all"
-            >
-              <Shield className="h-4 w-4 mr-1" />
-              Admin
+              Return to User Login
             </Link>
           </div>
 

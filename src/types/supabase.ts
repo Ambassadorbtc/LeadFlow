@@ -299,6 +299,72 @@ export type Database = {
         }
         Relationships: []
       }
+      system_settings: {
+        Row: {
+          company_name: string | null
+          contact_email: string | null
+          created_at: string | null
+          enable_email_notifications: boolean | null
+          enable_in_app_notifications: boolean | null
+          enable_notifications: boolean | null
+          enable_user_registration: boolean | null
+          id: string
+          maintenance_message: string | null
+          maintenance_mode: boolean | null
+          max_users: number | null
+          password_reset_email_template: string | null
+          privacy_policy: string | null
+          site_name: string | null
+          support_email: string | null
+          terms_of_service: string | null
+          updated_at: string | null
+          welcome_email_template: string | null
+          welcome_message: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          contact_email?: string | null
+          created_at?: string | null
+          enable_email_notifications?: boolean | null
+          enable_in_app_notifications?: boolean | null
+          enable_notifications?: boolean | null
+          enable_user_registration?: boolean | null
+          id?: string
+          maintenance_message?: string | null
+          maintenance_mode?: boolean | null
+          max_users?: number | null
+          password_reset_email_template?: string | null
+          privacy_policy?: string | null
+          site_name?: string | null
+          support_email?: string | null
+          terms_of_service?: string | null
+          updated_at?: string | null
+          welcome_email_template?: string | null
+          welcome_message?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          contact_email?: string | null
+          created_at?: string | null
+          enable_email_notifications?: boolean | null
+          enable_in_app_notifications?: boolean | null
+          enable_notifications?: boolean | null
+          enable_user_registration?: boolean | null
+          id?: string
+          maintenance_message?: string | null
+          maintenance_mode?: boolean | null
+          max_users?: number | null
+          password_reset_email_template?: string | null
+          privacy_policy?: string | null
+          site_name?: string | null
+          support_email?: string | null
+          terms_of_service?: string | null
+          updated_at?: string | null
+          welcome_email_template?: string | null
+          welcome_message?: string | null
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           auto_refresh_dashboard: boolean | null
@@ -382,6 +448,7 @@ export type Database = {
           full_name: string | null
           id: string
           image: string | null
+          is_active: boolean | null
           is_admin: boolean | null
           is_blocked: boolean | null
           job_title: string | null
@@ -402,6 +469,7 @@ export type Database = {
           full_name?: string | null
           id: string
           image?: string | null
+          is_active?: boolean | null
           is_admin?: boolean | null
           is_blocked?: boolean | null
           job_title?: string | null
@@ -422,6 +490,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           image?: string | null
+          is_active?: boolean | null
           is_admin?: boolean | null
           is_blocked?: boolean | null
           job_title?: string | null
@@ -448,6 +517,10 @@ export type Database = {
       get_total_deal_value: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      sync_missing_users: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
     }
     Enums: {

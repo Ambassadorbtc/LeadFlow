@@ -15,12 +15,17 @@ export default async function ProfilePage() {
     return redirect("/sign-in");
   }
 
+  console.log("Auth user ID:", user.id);
+  console.log("Auth user email:", user.email);
+
   // Fetch user profile data
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("users")
     .select("*")
     .eq("id", user.id)
     .single();
+
+  console.log("Profile query result:", profile, profileError);
 
   // Fetch user activity
   const { data: recentDeals = [] } = await supabase

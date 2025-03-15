@@ -706,7 +706,9 @@ export default function LeadsClientPage({
                         </span>
                       ) : (
                         <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-medium rounded-full bg-[#f3f4f6] dark:bg-gray-700 text-[#4b5563] dark:text-gray-300">
-                          {lead.status || "New"}
+                          {typeof lead.status === "string"
+                            ? lead.status
+                            : "New"}
                         </span>
                       )}
                     </td>

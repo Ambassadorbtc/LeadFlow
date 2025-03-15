@@ -45,6 +45,21 @@ export const signUpAction = async (formData: FormData) => {
     );
   }
 
+  // Check if user already exists
+  const { data: existingUser } = await supabase
+    .from("users")
+    .select("*")
+    .eq("email", email)
+    .single();
+
+  if (existingUser) {
+    return encodedRedirect(
+      "error",
+      "/sign-up",
+      "An account with this email already exists",
+    );
+  }
+
   const {
     data: { user },
     error,
@@ -69,15 +84,21 @@ export const signUpAction = async (formData: FormData) => {
 
   if (user) {
     try {
-      const { error: updateError } = await supabase.from("users").insert({
-        id: user.id,
-        name: fullName,
-        full_name: fullName,
-        email: email,
-        user_id: user.id,
-        token_identifier: user.id,
-        created_at: new Date().toISOString(),
-      });
+      // Create user record in the public.users table
+      const { error: updateError } = await supabase.from("users").upsert(
+        {
+          id: user.id,
+          name: fullName,
+          full_name: fullName,
+          email: email,
+          user_id: user.id,
+          token_identifier: user.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          is_active: true,
+        },
+        { onConflict: "id", ignoreDuplicates: false },
+      );
 
       if (updateError) {
         console.error("Error updating user profile:", updateError);
@@ -97,18 +118,86 @@ export const signUpAction = async (formData: FormData) => {
 export const signInAction = async (formData: FormData) => {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-  const supabase = await createClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) {
-    return encodedRedirect("error", "/sign-in", error.message);
+  if (!email || !password) {
+    return encodedRedirect(
+      "error",
+      "/sign-in",
+      "Email and password are required",
+    );
   }
 
-  return redirect("/dashboard");
+  console.log("Attempting to sign in with email:", email);
+  const supabase = await createClient();
+
+  // First try to sign in with the provided credentials
+  const { data: authData, error: signInError } =
+    await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+  if (signInError) {
+    console.error("Sign in error:", signInError.message);
+    return encodedRedirect("error", "/sign-in", signInError.message);
+  }
+
+  if (!authData?.user) {
+    console.error("Authentication succeeded but no user data returned");
+    return encodedRedirect(
+      "error",
+      "/sign-in",
+      "Authentication error. Please try again.",
+    );
+  }
+
+  // Check if user exists in the database
+  const { data: existingUser, error: userError } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", authData.user.id)
+    .single();
+
+  // If user doesn't exist in the public.users table but authentication succeeded,
+  // create the user record
+  if ((!existingUser || userError) && authData?.user) {
+    console.log(
+      "User authenticated but not found in database, creating user record",
+    );
+    try {
+      const { error: insertError } = await supabase.from("users").upsert(
+        {
+          id: authData.user.id,
+          email: email,
+          full_name:
+            authData.user.user_metadata?.full_name || email.split("@")[0],
+          name: authData.user.user_metadata?.full_name || email.split("@")[0],
+          user_id: authData.user.id,
+          token_identifier: authData.user.id,
+          created_at: new Date().toISOString(),
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id", ignoreDuplicates: false },
+      );
+
+      if (insertError) {
+        console.error("Error creating user record:", insertError);
+        // Continue anyway since authentication succeeded
+      }
+    } catch (err) {
+      console.error("Error in user record creation:", err);
+    }
+  }
+
+  console.log("Sign in successful, checking if admin");
+
+  // Check if user is admin and redirect accordingly
+  if (email === "admin@leadflowapp.online") {
+    return redirect("/admin/dashboard");
+  } else {
+    return redirect("/dashboard");
+  }
 };
 
 export const forgotPasswordAction = async (formData: FormData) => {

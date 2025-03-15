@@ -15,6 +15,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    console.log("Current user ID:", user.id);
+    console.log("Current user email:", user.email);
+
     // Update user metadata in auth
     const { error: authError } = await supabase.auth.updateUser({
       data: {
@@ -26,14 +29,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: authError.message }, { status: 500 });
     }
 
-    // Skip the setup step as we've created a migration that ensures all columns exist
-
     // Check if user exists in the users table
-    const { data: existingUser } = await supabase
+    const { data: existingUser, error: queryError } = await supabase
       .from("users")
-      .select("id")
+      .select("*")
       .eq("id", user.id)
       .single();
+
+    console.log("Existing user query result:", existingUser, queryError);
 
     let profileError;
 
@@ -43,7 +46,7 @@ export async function POST(request: NextRequest) {
         .from("users")
         .update({
           full_name: formData.full_name,
-          email: formData.email,
+          email: user.email, // Use the authenticated user's email
           phone: formData.phone,
           bio: formData.bio,
           job_title: formData.job_title,
@@ -54,22 +57,30 @@ export async function POST(request: NextRequest) {
         .eq("id", user.id);
 
       profileError = error;
+      console.log("Update result:", error);
     } else {
       // Insert new user
-      const { error } = await supabase.from("users").insert({
-        id: user.id,
-        full_name: formData.full_name,
-        email: formData.email,
-        phone: formData.phone,
-        bio: formData.bio,
-        job_title: formData.job_title,
-        company: formData.company,
-        avatar_url: formData.avatar_url,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+      const { error } = await supabase.from("users").upsert(
+        {
+          id: user.id,
+          full_name: formData.full_name,
+          email: user.email, // Use the authenticated user's email
+          phone: formData.phone,
+          bio: formData.bio,
+          job_title: formData.job_title,
+          company: formData.company,
+          avatar_url: formData.avatar_url,
+          token_identifier: user.id,
+          user_id: user.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          is_active: true,
+        },
+        { onConflict: "id", ignoreDuplicates: false },
+      );
 
       profileError = error;
+      console.log("Insert result:", error);
     }
 
     if (profileError) {

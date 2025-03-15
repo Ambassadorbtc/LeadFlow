@@ -38,13 +38,13 @@ export default function ProfileClient({
 
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    full_name: profile.full_name || user.user_metadata?.full_name || "",
-    email: profile.email || user.email || "",
-    phone: profile.phone || "",
-    bio: profile.bio || "",
-    job_title: profile.job_title || "",
-    company: profile.company || "",
-    avatar_url: profile.avatar_url || "",
+    full_name: profile?.full_name || user?.user_metadata?.full_name || "",
+    email: profile?.email || user?.email || "",
+    phone: profile?.phone || "",
+    bio: profile?.bio || "",
+    job_title: profile?.job_title || "",
+    company: profile?.company || "",
+    avatar_url: profile?.avatar_url || "",
   });
 
   const handleChange = (
@@ -59,10 +59,6 @@ export default function ProfileClient({
     setIsLoading(true);
 
     try {
-      // First, ensure the users table exists with all required columns
-      // Skip the setup step as we've created a migration that ensures all columns exist
-      // This avoids CORS issues with edge functions
-
       // Use the dedicated API endpoint to update profile
       const response = await fetch("/api/profile/update", {
         method: "POST",
