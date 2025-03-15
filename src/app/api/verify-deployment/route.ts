@@ -19,10 +19,10 @@ export async function GET() {
         status: dbError ? "error" : "success",
         message: dbError ? dbError.message : "Database connection successful",
       };
-    } catch (error: any) {
+    } catch (error) {
       results["database"] = {
         status: "error",
-        message: error.message,
+        message: error instanceof Error ? error.message : String(error),
       };
     }
 
@@ -37,10 +37,10 @@ export async function GET() {
           ? authError.message
           : "Authentication system working",
       };
-    } catch (error: any) {
+    } catch (error) {
       results["authentication"] = {
         status: "error",
-        message: error.message,
+        message: error instanceof Error ? error.message : String(error),
       };
     }
 
@@ -67,10 +67,10 @@ export async function GET() {
             ? error.message
             : `Table '${table}' exists and is accessible`,
         };
-      } catch (error: any) {
+      } catch (error) {
         results["tables"][table] = {
           status: "error",
-          message: error.message,
+          message: error instanceof Error ? error.message : String(error),
         };
       }
     }
@@ -108,10 +108,10 @@ export async function GET() {
           : "Edge functions are accessible",
         functions: edgeFunctions || [],
       };
-    } catch (error: any) {
+    } catch (error) {
       results["edgeFunctions"] = {
         status: "error",
-        message: error.message,
+        message: error instanceof Error ? error.message : String(error),
       };
     }
 
@@ -119,17 +119,22 @@ export async function GET() {
       success: true,
       results,
       overallStatus: Object.values(results).some(
-        (result: any) =>
+        (result) =>
           result.status === "error" ||
-          Object.values(result).some((r: any) => r.status === "error"),
+          Object.values(result).some((r) => r.status === "error"),
       )
         ? "error"
         : "success",
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error verifying deployment:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to verify deployment" },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : String(error) || "Failed to verify deployment",
+      },
       { status: 500 },
     );
   }

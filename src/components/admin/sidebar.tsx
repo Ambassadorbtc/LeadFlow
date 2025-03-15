@@ -8,6 +8,7 @@ import {
   FileText,
   Settings,
   LogOut,
+  Server,
 } from "lucide-react";
 import { createClient } from "@/supabase/client";
 
@@ -35,6 +36,11 @@ export default function AdminSidebar() {
       name: "Reports",
       href: "/admin/reports",
       icon: <FileText className="h-5 w-5" />,
+    },
+    {
+      name: "Deployment",
+      href: "/admin/deployment",
+      icon: <Server className="h-5 w-5" />,
     },
     {
       name: "Settings",

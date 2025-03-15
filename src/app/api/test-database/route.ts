@@ -32,10 +32,10 @@ export async function GET() {
           exists: !error,
           error: error ? error.message : null,
         };
-      } catch (error: any) {
+      } catch (error) {
         results[table] = {
           exists: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         };
       }
     }
@@ -69,10 +69,15 @@ export async function GET() {
       realtime: realtimeError ? { error: realtimeError.message } : realtimeData,
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error testing database:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to test database" },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : String(error) || "Failed to test database",
+      },
       { status: 500 },
     );
   }

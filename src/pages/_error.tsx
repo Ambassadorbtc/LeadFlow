@@ -7,7 +7,7 @@ interface ErrorProps {
   title?: string;
 }
 
-const Error: NextPage<ErrorProps> = ({ statusCode, title }) => {
+const ErrorPage: NextPage<ErrorProps> = ({ statusCode, title }) => {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
       <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-sm text-center">
@@ -27,9 +27,9 @@ const Error: NextPage<ErrorProps> = ({ statusCode, title }) => {
   );
 };
 
-Error.getInitialProps = ({ res, err }: any) => {
+ErrorPage.getInitialProps = ({ res, err }: any) => {
   const statusCode = res ? res.statusCode : err ? err.statusCode : 404;
   return { statusCode };
 };
 
-export default Error;
+export default ErrorPage;
