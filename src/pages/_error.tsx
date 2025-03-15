@@ -1,35 +1,22 @@
-import { NextPage } from "next";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import Error from "next/error";
 
 interface ErrorProps {
-  statusCode?: number;
+  statusCode: number;
   title?: string;
 }
 
-const ErrorPage: NextPage<ErrorProps> = ({ statusCode, title }) => {
+function CustomError({ statusCode, title }: ErrorProps) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
-      <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-sm text-center">
-        <h2 className="text-2xl font-semibold mb-4">
-          {title || "An Error Occurred"}
-        </h2>
-        <p className="text-muted-foreground mb-6">
-          {statusCode
-            ? `An error ${statusCode} occurred on server`
-            : "An error occurred on client"}
-        </p>
-        <Button asChild>
-          <Link href="/dashboard">Return to Dashboard</Link>
-        </Button>
-      </div>
-    </div>
+    <Error
+      statusCode={statusCode}
+      title={title || `An error ${statusCode} occurred on server`}
+    />
   );
-};
+}
 
-ErrorPage.getInitialProps = ({ res, err }: any) => {
+CustomError.getInitialProps = ({ res, err }: any) => {
   const statusCode = res ? res.statusCode : err ? err.statusCode : 404;
   return { statusCode };
 };
 
-export default ErrorPage;
+export default CustomError;

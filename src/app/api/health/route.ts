@@ -32,10 +32,10 @@ export async function GET() {
         message: dbError ? dbError.message : "Database connection successful",
         response_time_ms: dbResponseTime,
       };
-    } catch (error) {
+    } catch (error: any) {
       results["database"] = {
         status: "error",
-        message: error instanceof Error ? error.message : String(error),
+        message: error.message,
       };
     }
 
@@ -51,10 +51,10 @@ export async function GET() {
         message: authError ? authError.message : "Auth system is working",
         response_time_ms: authResponseTime,
       };
-    } catch (error) {
+    } catch (error: any) {
       results["auth"] = {
         status: "error",
-        message: error instanceof Error ? error.message : String(error),
+        message: error.message,
       };
     }
 
@@ -73,10 +73,10 @@ export async function GET() {
         response_time_ms: edgeFnResponseTime,
         count: edgeFunctions?.length || 0,
       };
-    } catch (error) {
+    } catch (error: any) {
       results["edge_functions"] = {
         status: "error",
-        message: error instanceof Error ? error.message : String(error),
+        message: error.message,
       };
     }
 
@@ -96,15 +96,10 @@ export async function GET() {
       results,
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in health check:", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : String(error) || "Failed to perform health check",
-      },
+      { error: error.message || "Failed to perform health check" },
       { status: 500 },
     );
   }

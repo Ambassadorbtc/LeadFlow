@@ -72,10 +72,10 @@ export async function GET() {
           : "User synchronization is working",
         data: syncData,
       };
-    } catch (error) {
+    } catch (error: any) {
       results["sync_users"] = {
         status: "error",
-        message: error instanceof Error ? error.message : String(error),
+        message: error.message,
       };
     }
 
@@ -84,15 +84,10 @@ export async function GET() {
       results,
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error testing auth flows:", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : String(error) || "Failed to test auth flows",
-      },
+      { error: error.message || "Failed to test auth flows" },
       { status: 500 },
     );
   }

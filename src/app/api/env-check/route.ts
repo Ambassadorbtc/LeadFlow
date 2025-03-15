@@ -38,15 +38,10 @@ export async function GET() {
       constructedUrl,
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error checking environment:", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : String(error) || "Failed to check environment",
-      },
+      { error: error.message || "Failed to check environment" },
       { status: 500 },
     );
   }
