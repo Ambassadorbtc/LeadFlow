@@ -1,5 +1,7 @@
 import { Metadata } from "next";
 import { Providers } from "../providers";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { NotFoundBoundary } from "@/components/not-found-boundary";
 
 export const metadata: Metadata = {
   title: "Dashboard - LeadFlow CRM",
@@ -11,5 +13,11 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <Providers>{children}</Providers>;
+  return (
+    <Providers>
+      <ErrorBoundary>
+        <NotFoundBoundary>{children}</NotFoundBoundary>
+      </ErrorBoundary>
+    </Providers>
+  );
 }

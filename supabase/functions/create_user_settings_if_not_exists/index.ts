@@ -14,18 +14,39 @@ serve(async (req) => {
   }
 
   try {
-    // Create a Supabase client with the Auth context of the logged in user
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    );
+    // Create a Supabase client with the Admin key
+    let authToken = "";
+    const authHeader = req.headers.get("Authorization") || "";
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      authToken = authHeader.substring(7);
+    }
+
+    // Hard-code the Supabase URL and key from environment variables
+    let supabaseUrl = Deno.env.get("SUPABASE_PROJECT_ID")
+      ? `https://${Deno.env.get("SUPABASE_PROJECT_ID")}.supabase.co`
+      : req.headers.get("x-supabase-url") || Deno.env.get("SUPABASE_URL");
+
+    // Try to get the service key directly
+    const supabaseKey =
+      Deno.env.get("SUPABASE_SERVICE_KEY") ||
+      authToken ||
+      req.headers.get("x-supabase-key") ||
+      Deno.env.get("SUPABASE_ANON_KEY"); // Fallback to anon key if service key is not available
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error(
+        "Supabase credentials not found. Please ensure SUPABASE_PROJECT_ID and SUPABASE_SERVICE_KEY are set.",
+      );
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
     // Execute SQL to create user_settings table if it doesn't exist
-    const { error } = await supabaseClient.rpc("exec_sql", {
+    const { error } = await supabaseAdmin.rpc("exec_sql", {
       query: `
         CREATE TABLE IF NOT EXISTS public.user_settings (
           id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-          user_id UUID REFERENCES auth.users(id),
+          user_id UUID REFERENCES users(id) ON DELETE CASCADE,
           email_notifications BOOLEAN DEFAULT true,
           deal_updates BOOLEAN DEFAULT true,
           contact_updates BOOLEAN DEFAULT true,
@@ -85,19 +106,80 @@ serve(async (req) => {
         CREATE POLICY "Users can insert their own settings"
           ON public.user_settings FOR INSERT
           WITH CHECK (auth.uid() = user_id);
+          
+        -- Add to realtime publication if not already added
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_publication_tables
+            WHERE pubname = 'supabase_realtime'
+            AND schemaname = 'public'
+            AND tablename = 'user_settings'
+          ) THEN
+            EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE user_settings';
+          END IF;
+        END;
+        $$;
       `,
     });
 
     if (error) throw error;
 
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    // Get all users without settings
+    const { data: users, error: usersError } = await supabaseAdmin
+      .from("users")
+      .select("id")
+      .not("id", "in", supabaseAdmin.from("user_settings").select("user_id"));
+
+    if (usersError) {
+      throw new Error(`Error fetching users: ${usersError.message}`);
+    }
+
+    // Create settings for users who don't have them
+    const results = [];
+    for (const user of users) {
+      const { data: setting, error: settingError } = await supabaseAdmin
+        .from("user_settings")
+        .insert({
+          user_id: user.id,
+          theme_preference: "system",
+          email_notifications: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (settingError) {
+        results.push({
+          user_id: user.id,
+          status: "error",
+          message: settingError.message,
+        });
+      } else {
+        results.push({ user_id: user.id, status: "created", setting });
+      }
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        created: results.filter((r) => r.status === "created").length,
+        errors: results.filter((r) => r.status === "error").length,
+        results,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      },
+    );
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 400,
-    });
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      },
+    );
   }
 });

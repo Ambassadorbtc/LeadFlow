@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function Error({
   error,
@@ -22,12 +23,20 @@ export default function Error({
         <p className="text-muted-foreground mb-6">
           An error occurred while processing your request. Please try again.
         </p>
-        <Button
-          onClick={() => reset()}
-          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          Try again
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Button
+            onClick={() => reset()}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Try again
+          </Button>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center justify-center rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/90"
+          >
+            Return to Dashboard
+          </Link>
+        </div>
       </div>
     </div>
   );

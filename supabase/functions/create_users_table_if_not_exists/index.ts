@@ -14,14 +14,35 @@ serve(async (req) => {
   }
 
   try {
-    // Create a Supabase client with the Auth context of the logged in user
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    );
+    // Create a Supabase client with the Admin key
+    let authToken = "";
+    const authHeader = req.headers.get("Authorization") || "";
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      authToken = authHeader.substring(7);
+    }
 
-    // Execute SQL to create users table if it doesn't exist
-    const { error } = await supabaseClient.rpc("exec_sql", {
+    // Hard-code the Supabase URL and key from environment variables
+    let supabaseUrl = Deno.env.get("SUPABASE_PROJECT_ID")
+      ? `https://${Deno.env.get("SUPABASE_PROJECT_ID")}.supabase.co`
+      : req.headers.get("x-supabase-url") || Deno.env.get("SUPABASE_URL");
+
+    // Try to get the service key directly
+    const supabaseKey =
+      Deno.env.get("SUPABASE_SERVICE_KEY") ||
+      authToken ||
+      req.headers.get("x-supabase-key") ||
+      Deno.env.get("SUPABASE_ANON_KEY"); // Fallback to anon key if service key is not available
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error(
+        "Supabase credentials not found. Please ensure SUPABASE_PROJECT_ID and SUPABASE_SERVICE_KEY are set.",
+      );
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
+    // Create users table if it doesn't exist
+    const { error: tableError } = await supabaseAdmin.rpc("exec_sql", {
       query: `
         CREATE TABLE IF NOT EXISTS public.users (
           id UUID PRIMARY KEY,
@@ -36,7 +57,9 @@ serve(async (req) => {
           user_id UUID,
           token_identifier TEXT,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+          is_active BOOLEAN DEFAULT true,
+          is_admin BOOLEAN DEFAULT false
         );
         
         -- Add missing columns if they don't exist
@@ -61,6 +84,14 @@ serve(async (req) => {
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'avatar_url') THEN
                 ALTER TABLE public.users ADD COLUMN avatar_url TEXT;
             END IF;
+            
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'is_active') THEN
+                ALTER TABLE public.users ADD COLUMN is_active BOOLEAN DEFAULT true;
+            END IF;
+            
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'is_admin') THEN
+                ALTER TABLE public.users ADD COLUMN is_admin BOOLEAN DEFAULT false;
+            END IF;
         END
         $;
         
@@ -84,19 +115,102 @@ serve(async (req) => {
         CREATE POLICY "Users can insert their own profile"
           ON public.users FOR INSERT
           WITH CHECK (auth.uid() = id);
+          
+        -- Add to realtime publication if not already added
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_publication_tables
+            WHERE pubname = 'supabase_realtime'
+            AND schemaname = 'public'
+            AND tablename = 'users'
+          ) THEN
+            EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE users';
+          END IF;
+        END;
+        $$;
       `,
     });
 
-    if (error) throw error;
+    if (tableError) {
+      throw new Error(`Error creating users table: ${tableError.message}`);
+    }
 
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    // Get all auth users
+    const { data: authUsers, error: authError } =
+      await supabaseAdmin.auth.admin.listUsers();
+
+    if (authError) {
+      throw new Error(`Error fetching auth users: ${authError.message}`);
+    }
+
+    // Process each auth user
+    const results = [];
+    for (const user of authUsers.users) {
+      // Check if user exists in public.users table
+      const { data: existingUser } = await supabaseAdmin
+        .from("users")
+        .select("id")
+        .eq("id", user.id)
+        .single();
+
+      if (!existingUser) {
+        // Create user in public.users table
+        const { error: insertError } = await supabaseAdmin
+          .from("users")
+          .insert({
+            id: user.id,
+            email: user.email,
+            full_name:
+              user.user_metadata?.full_name ||
+              user.email?.split("@")[0] ||
+              "User",
+            name:
+              user.user_metadata?.full_name ||
+              user.email?.split("@")[0] ||
+              "User",
+            user_id: user.id,
+            token_identifier: user.id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_active: true,
+            is_admin: false,
+          });
+
+        if (insertError) {
+          results.push({
+            id: user.id,
+            status: "error",
+            message: insertError.message,
+          });
+        } else {
+          results.push({ id: user.id, status: "created" });
+        }
+      } else {
+        results.push({ id: user.id, status: "exists" });
+      }
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        created: results.filter((r) => r.status === "created").length,
+        existing: results.filter((r) => r.status === "exists").length,
+        errors: results.filter((r) => r.status === "error").length,
+        results,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      },
+    );
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 400,
-    });
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      },
+    );
   }
 });

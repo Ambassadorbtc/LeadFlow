@@ -25,6 +25,7 @@ export default function RootLayout({
           src="https://api.tempolabs.ai/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js"
           strategy="beforeInteractive"
         />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
       <body className={inter.className}>
         <ThemeProvider
