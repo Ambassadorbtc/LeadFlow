@@ -165,6 +165,39 @@ export type Database = {
           },
         ]
       }
+      import_history: {
+        Row: {
+          created_at: string | null
+          file_name: string | null
+          id: string
+          import_type: string
+          metadata: Json | null
+          record_count: number
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_name?: string | null
+          id?: string
+          import_type: string
+          metadata?: Json | null
+          record_count: number
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string | null
+          id?: string
+          import_type?: string
+          metadata?: Json | null
+          record_count?: number
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       lead_comments: {
         Row: {
           comment: string
@@ -210,13 +243,17 @@ export type Database = {
       leads: {
         Row: {
           address: string | null
+          ba_interest: boolean | null
           bf_interest: boolean | null
           business_name: string
           contact_email: string | null
           contact_name: string
           created_at: string | null
+          ct_interest: boolean | null
           deal_value: number | null
           id: string
+          import_batch_id: string | null
+          notes: string | null
           owner: string | null
           phone: string | null
           prospect_id: string
@@ -226,13 +263,17 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          ba_interest?: boolean | null
           bf_interest?: boolean | null
           business_name: string
           contact_email?: string | null
           contact_name: string
           created_at?: string | null
+          ct_interest?: boolean | null
           deal_value?: number | null
           id?: string
+          import_batch_id?: string | null
+          notes?: string | null
           owner?: string | null
           phone?: string | null
           prospect_id: string
@@ -242,13 +283,17 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          ba_interest?: boolean | null
           bf_interest?: boolean | null
           business_name?: string
           contact_email?: string | null
           contact_name?: string
           created_at?: string | null
+          ct_interest?: boolean | null
           deal_value?: number | null
           id?: string
+          import_batch_id?: string | null
+          notes?: string | null
           owner?: string | null
           phone?: string | null
           prospect_id?: string
@@ -423,11 +468,13 @@ export type Database = {
           deal_updates: boolean | null
           default_currency: string | null
           default_language: string | null
+          disable_onboarding: boolean | null
           email_notifications: boolean | null
           id: string
           language: string | null
           lead_notifications: boolean | null
           marketing_emails: boolean | null
+          onboarding_completed: boolean | null
           show_deal_values: boolean | null
           task_notifications: boolean | null
           theme_preference: string | null
@@ -446,11 +493,13 @@ export type Database = {
           deal_updates?: boolean | null
           default_currency?: string | null
           default_language?: string | null
+          disable_onboarding?: boolean | null
           email_notifications?: boolean | null
           id?: string
           language?: string | null
           lead_notifications?: boolean | null
           marketing_emails?: boolean | null
+          onboarding_completed?: boolean | null
           show_deal_values?: boolean | null
           task_notifications?: boolean | null
           theme_preference?: string | null
@@ -469,11 +518,13 @@ export type Database = {
           deal_updates?: boolean | null
           default_currency?: string | null
           default_language?: string | null
+          disable_onboarding?: boolean | null
           email_notifications?: boolean | null
           id?: string
           language?: string | null
           lead_notifications?: boolean | null
           marketing_emails?: boolean | null
+          onboarding_completed?: boolean | null
           show_deal_values?: boolean | null
           task_notifications?: boolean | null
           theme_preference?: string | null
@@ -560,6 +611,10 @@ export type Database = {
           sql_query: string
         }
         Returns: Json
+      }
+      fix_duplicate_users: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       get_total_deal_value: {
         Args: Record<PropertyKey, never>

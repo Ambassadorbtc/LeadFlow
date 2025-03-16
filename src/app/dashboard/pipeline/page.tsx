@@ -1,8 +1,8 @@
-// import DashboardNavbar from "@/components/dashboard-navbar";
-// import Sidebar from "@/components/dashboard/sidebar";
+import DashboardNavbar from "@/components/dashboard-navbar";
+import Sidebar from "@/components/dashboard/sidebar";
 import { redirect } from "next/navigation";
-// import Link from "next/link";
-import { createClient } from "@/supabase/client";
+import Link from "next/link";
+import { createClient } from "@/app/actions";
 import PipelineClientPage from "./client-page";
 
 export default async function PipelinePage({

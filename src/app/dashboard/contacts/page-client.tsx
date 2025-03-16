@@ -30,7 +30,7 @@ import { exportToCSV } from "@/utils/export-utils";
 import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
 
-export default function ContactsPageClient() {
+export default function ContactsPageClient({ contacts = [] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -47,9 +47,8 @@ export default function ContactsPageClient() {
   const [companyFilter, setCompanyFilter] = useState(initialCompany);
   const [sortField, setSortField] = useState(initialSort);
   const [sortOrder, setSortOrder] = useState(initialOrder);
-  const [contacts, setContacts] = useState([]);
-  const [filteredContacts, setFilteredContacts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [filteredContacts, setFilteredContacts] = useState(contacts);
+  const [isLoading, setIsLoading] = useState(false);
   const [companies, setCompanies] = useState([]);
 
   // Sort options
@@ -61,52 +60,61 @@ export default function ContactsPageClient() {
     { label: "Position", value: "position" },
   ];
 
-  // Fetch contacts with filters
-  const fetchContacts = async () => {
+  // Update filtered contacts when filters change
+  useEffect(() => {
     setIsLoading(true);
-    try {
-      let query = supabase.from("contacts").select("*");
+    let filtered = [...contacts];
 
-      // Apply company filter if provided
-      if (companyFilter) {
-        query = query.eq("company", companyFilter);
-      }
-
-      // Apply search term if provided
-      if (searchTerm) {
-        query = query.or(
-          `name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%,position.ilike.%${searchTerm}%`,
-        );
-      }
-
-      // Apply sorting
-      query = query.order(sortField, { ascending: sortOrder === "asc" });
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Error fetching contacts:", error);
-        return;
-      }
-
-      setContacts(data || []);
-      setFilteredContacts(data || []);
-
-      // Extract unique companies for filter
-      const uniqueCompanies = [
-        ...new Set(
-          data
-            ?.map((contact) => contact.company)
-            .filter((company) => company && company.trim() !== "") || [],
-        ),
-      ];
-      setCompanies(uniqueCompanies.sort());
-    } catch (error) {
-      console.error("Error in fetchContacts:", error);
-    } finally {
-      setIsLoading(false);
+    // Apply company filter
+    if (companyFilter) {
+      filtered = filtered.filter(
+        (contact) =>
+          contact.company &&
+          contact.company.toLowerCase() === companyFilter.toLowerCase(),
+      );
     }
-  };
+
+    // Apply search term
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (contact) =>
+          (contact.name && contact.name.toLowerCase().includes(search)) ||
+          (contact.email && contact.email.toLowerCase().includes(search)) ||
+          (contact.company && contact.company.toLowerCase().includes(search)) ||
+          (contact.position && contact.position.toLowerCase().includes(search)),
+      );
+    }
+
+    // Sort contacts
+    filtered.sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+
+      if (!aValue) aValue = "";
+      if (!bValue) bValue = "";
+
+      const comparison =
+        typeof aValue === "string"
+          ? aValue.localeCompare(bValue)
+          : aValue - bValue;
+
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+
+    setFilteredContacts(filtered);
+    setIsLoading(false);
+
+    // Extract unique companies for filter
+    const uniqueCompanies = [
+      ...new Set(
+        contacts
+          .map((contact) => contact.company)
+          .filter((company) => company && company.trim() !== ""),
+      ),
+    ];
+    setCompanies(uniqueCompanies.sort());
+  }, [contacts, searchTerm, companyFilter, sortField, sortOrder]);
 
   // Update URL with search params
   const updateSearchParams = (params) => {
@@ -190,11 +198,6 @@ export default function ContactsPageClient() {
       });
     }
   };
-
-  // Fetch contacts when filters change
-  useEffect(() => {
-    fetchContacts();
-  }, [searchTerm, companyFilter, sortField, sortOrder]);
 
   return (
     <div className="px-2 py-4 w-full bg-[#f6f6f8] dark:bg-gray-900">
@@ -478,7 +481,7 @@ export default function ContactsPageClient() {
                       key={contact.id}
                       className="hover:bg-[#f9fafb] dark:hover:bg-gray-700 cursor-pointer transition-colors"
                       onClick={() =>
-                        (window.location.href = `/dashboard/contacts/${contact.id}`)
+                        router.push(`/dashboard/contacts/${contact.id}`)
                       }
                     >
                       <td className="px-2 py-1 whitespace-nowrap">

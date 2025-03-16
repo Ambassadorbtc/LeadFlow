@@ -60,6 +60,19 @@ export default function Sidebar() {
   const router = useRouter();
   const supabase = createClient();
 
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Sign out error:", error);
+        return;
+      }
+      router.push("/sign-in");
+    } catch (err) {
+      console.error("Unexpected error during sign out:", err);
+    }
+  };
+
   return (
     <div className="hidden md:flex h-auto min-h-screen w-16 lg:w-20 flex-col border-r border-[#e5e7eb] bg-white dark:bg-gray-900 dark:border-gray-800 flex-shrink-0">
       <nav className="flex-1 overflow-auto py-4">
@@ -84,12 +97,10 @@ export default function Sidebar() {
       </nav>
       <div className="mt-auto pb-4 flex justify-center">
         <button
-          onClick={async () => {
-            const { error } = await supabase.auth.signOut();
-            if (!error) router.push("/sign-in");
-          }}
+          onClick={handleSignOut}
           className="p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 transition-colors"
           title="Sign Out"
+          aria-label="Sign Out"
         >
           <LogOut className="h-5 w-5" />
         </button>

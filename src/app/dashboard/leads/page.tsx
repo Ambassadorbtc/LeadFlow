@@ -1,8 +1,5 @@
-import DashboardNavbar from "@/components/dashboard-navbar";
-import Sidebar from "@/components/dashboard/sidebar";
-import { redirect } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/app/actions";
+import { redirect } from "next/navigation";
 import LeadsClientPage from "./client-page";
 
 export default async function LeadsPage({
@@ -27,7 +24,7 @@ export default async function LeadsPage({
   }
 
   // Fetch initial leads for server-side rendering
-  let query = supabase.from("leads").select("*").eq("user_id", user.id);
+  let query = supabase.from("leads").select("*");
 
   // Apply initial filters from URL if present
   if (searchParams.status) {
@@ -48,14 +45,8 @@ export default async function LeadsPage({
   const { data: leads = [] } = await query;
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0">
-        <DashboardNavbar />
-        <main className="flex-1 overflow-auto">
-          <LeadsClientPage initialLeads={leads} />
-        </main>
-      </div>
-    </div>
+    <main className="flex-1 overflow-auto">
+      <LeadsClientPage initialLeads={leads} />
+    </main>
   );
 }

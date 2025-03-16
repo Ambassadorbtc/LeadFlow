@@ -1,5 +1,3 @@
-import DashboardNavbar from "@/components/dashboard-navbar";
-import Sidebar from "@/components/dashboard/sidebar";
 import { redirect } from "next/navigation";
 import { createClient } from "@/app/actions";
 import ContactsPageClient from "./page-client";
@@ -15,15 +13,20 @@ export default async function ContactsPage() {
     return redirect("/sign-in");
   }
 
+  // Fetch contacts
+  const { data: contacts, error } = await supabase
+    .from("contacts")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching contacts:", error);
+    return <div>Error loading contacts. Please try again later.</div>;
+  }
+
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardNavbar />
-        <main className="flex-1 overflow-auto">
-          <ContactsPageClient />
-        </main>
-      </div>
-    </div>
+    <main className="flex-1 overflow-y-auto p-4 md:p-6">
+      <ContactsPageClient contacts={contacts || []} />
+    </main>
   );
 }

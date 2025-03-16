@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Redirects to a specified path with an encoded message as a query parameter.
@@ -15,4 +16,20 @@ export function encodedRedirect(
   const params = new URLSearchParams();
   params.set(type, message);
   return redirect(`${path}?${params.toString()}`);
+}
+
+/**
+ * Creates a Supabase client using environment variables.
+ * This version is safe to use in client components.
+ * @returns The Supabase client instance
+ */
+export function createClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Missing Supabase environment variables");
+  }
+
+  return createSupabaseClient(supabaseUrl, supabaseKey);
 }

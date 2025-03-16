@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { PIPELINE_STAGES } from "@/types/schema";
 import {
   BarChart3,
@@ -22,7 +21,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip as RechartsTooltip,
+  Tooltip,
   ResponsiveContainer,
   Legend,
   PieChart,
@@ -31,6 +30,7 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import { Button } from "@/components/ui/button";
 
 type AnalyticsClientProps = {
   totalDeals: number;
@@ -207,69 +207,82 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
     });
   })();
 
+  // Use the generated monthly data
+  const monthlyData = generatedMonthlyData;
+
+  // Generate data for deal types
+  const dealTypes = deals.reduce((acc, deal) => {
+    const type = deal.deal_type || "Other";
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {});
+
+  const dealTypeData = Object.entries(dealTypes)
+    .map(([name, value]) => ({
+      name,
+      value,
+    }))
+    .filter((item) => item.value > 0);
+
   return (
-    <div className="space-y-8">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Total Deals
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Deals</CardTitle>
+            <ClipboardList className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalDeals}</div>
-            <div className="text-xs text-gray-500 mt-1">
-              Active deals in pipeline
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Across all pipeline stages
+            </p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Total Value
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               ${totalValue.toLocaleString()}
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              Sum of all deal values
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Combined value of all deals
+            </p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Avg Deal Value
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Avg. Deal Value
             </CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               ${avgDealValue.toLocaleString()}
             </div>
-            <div className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground">
               Average value per deal
-            </div>
+            </p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Win Rate
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{winRate}%</div>
-            <div className="text-xs text-gray-500 mt-1">
-              Closed deals conversion
-            </div>
+            <div className="text-2xl font-bold">{winRate.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground">
+              Percentage of deals won
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Section */}
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -281,105 +294,141 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
         <TabsContent value="overview" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Monthly Performance</CardTitle>
-              <div className="flex space-x-2">
-                <Button
-                  variant={chartType === "area" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setChartType("area")}
-                >
-                  Area
-                </Button>
-                <Button
-                  variant={chartType === "bar" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setChartType("bar")}
-                >
-                  Bar
-                </Button>
-                <Button
-                  variant={chartType === "line" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setChartType("line")}
-                >
-                  Line
-                </Button>
+              <div className="flex items-center justify-between">
+                <CardTitle>Monthly Performance</CardTitle>
+                <div className="flex space-x-2">
+                  <Button
+                    variant={chartType === "area" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setChartType("area")}
+                    className="h-8"
+                  >
+                    Area
+                  </Button>
+                  <Button
+                    variant={chartType === "bar" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setChartType("bar")}
+                    className="h-8"
+                  >
+                    Bar
+                  </Button>
+                  <Button
+                    variant={chartType === "line" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setChartType("line")}
+                    className="h-8"
+                  >
+                    Line
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   {chartType === "area" ? (
-                    <AreaChart data={generatedMonthlyData}>
-                      <defs>
-                        <linearGradient
-                          id="colorValue"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor="#4f46e5"
-                            stopOpacity={0.8}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="#4f46e5"
-                            stopOpacity={0.1}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <RechartsTooltip
-                        formatter={(value: any) => [
-                          `${value.toLocaleString()}`,
+                    <AreaChart
+                      data={monthlyData}
+                      margin={{
+                        top: 10,
+                        right: 30,
+                        left: 0,
+                        bottom: 0,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `$${value}`}
+                      />
+                      <Tooltip
+                        formatter={(value) => [
+                          `$${Number(value).toLocaleString()}`,
                           "Value",
                         ]}
                       />
                       <Area
                         type="monotone"
                         dataKey="value"
-                        stroke="#4f46e5"
-                        fillOpacity={1}
-                        fill="url(#colorValue)"
+                        stroke={COLORS[0]}
+                        fill={COLORS[0]}
+                        fillOpacity={0.2}
                       />
                     </AreaChart>
                   ) : chartType === "bar" ? (
-                    <BarChart data={generatedMonthlyData}>
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <RechartsTooltip
-                        formatter={(value: any) => [
-                          `${value.toLocaleString()}`,
+                    <BarChart
+                      data={monthlyData}
+                      margin={{
+                        top: 10,
+                        right: 30,
+                        left: 0,
+                        bottom: 0,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `$${value}`}
+                      />
+                      <Tooltip
+                        formatter={(value) => [
+                          `$${Number(value).toLocaleString()}`,
                           "Value",
                         ]}
                       />
                       <Bar
                         dataKey="value"
-                        fill="#4f46e5"
+                        fill={COLORS[0]}
                         radius={[4, 4, 0, 0]}
                       />
                     </BarChart>
                   ) : (
-                    <LineChart data={generatedMonthlyData}>
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <RechartsTooltip
-                        formatter={(value: any) => [
-                          `${value.toLocaleString()}`,
+                    <LineChart
+                      data={monthlyData}
+                      margin={{
+                        top: 10,
+                        right: 30,
+                        left: 0,
+                        bottom: 0,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `$${value}`}
+                      />
+                      <Tooltip
+                        formatter={(value) => [
+                          `$${Number(value).toLocaleString()}`,
                           "Value",
                         ]}
                       />
                       <Line
                         type="monotone"
                         dataKey="value"
-                        stroke="#4f46e5"
+                        stroke={COLORS[0]}
                         strokeWidth={2}
                         dot={{ r: 4 }}
                         activeDot={{ r: 6 }}
@@ -390,34 +439,160 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
               </div>
             </CardContent>
           </Card>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Deal Types</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={dealTypeData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, percent }) =>
+                          `${name}: ${(percent * 100).toFixed(0)}%`
+                        }
+                      >
+                        {dealTypeData.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value, name, props) => [
+                          value,
+                          props.payload.name,
+                        ]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Team Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      layout="vertical"
+                      data={[
+                        { name: "John Doe", value: 120000 },
+                        { name: "Jane Smith", value: 98000 },
+                        { name: "Robert Johnson", value: 86000 },
+                        { name: "Emily Davis", value: 72000 },
+                        { name: "Michael Brown", value: 65000 },
+                      ]}
+                      margin={{
+                        top: 5,
+                        right: 30,
+                        left: 20,
+                        bottom: 5,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis
+                        type="number"
+                        tickFormatter={(value) => `$${value / 1000}k`}
+                      />
+                      <YAxis
+                        dataKey="name"
+                        type="category"
+                        tick={{ fontSize: 12 }}
+                        width={100}
+                      />
+                      <Tooltip
+                        formatter={(value) => [
+                          `$${Number(value).toLocaleString()}`,
+                          "Value",
+                        ]}
+                      />
+                      <Bar
+                        dataKey="value"
+                        fill={COLORS[1]}
+                        radius={[0, 4, 4, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="pipeline" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Deal Stages</CardTitle>
+              <CardTitle>Pipeline Stages</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px]">
+              <div className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={stageData}
-                    layout="vertical"
-                    margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 60,
+                    }}
                   >
-                    <XAxis type="number" />
-                    <YAxis type="category" dataKey="name" width={100} />
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                    <RechartsTooltip
-                      formatter={(value: any, name: any) =>
-                        name === "count"
-                          ? [value, "Deals"]
-                          : [`${value.toLocaleString()}`, "Value"]
-                      }
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 12 }}
+                      tickLine={false}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis
+                      yAxisId="left"
+                      orientation="left"
+                      stroke={COLORS[0]}
+                      tickFormatter={(value) => `$${value / 1000}k`}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      stroke={COLORS[1]}
+                    />
+                    <Tooltip
+                      formatter={(value, name) => [
+                        name === "value"
+                          ? `$${Number(value).toLocaleString()}`
+                          : value,
+                        name === "value" ? "Value" : "Count",
+                      ]}
                     />
                     <Legend />
-                    <Bar dataKey="count" fill="#8b5cf6" name="Deal Count" />
-                    <Bar dataKey="value" fill="#4f46e5" name="Deal Value" />
+                    <Bar
+                      yAxisId="left"
+                      dataKey="value"
+                      fill={COLORS[0]}
+                      name="Value"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      yAxisId="right"
+                      dataKey="count"
+                      fill={COLORS[1]}
+                      name="Count"
+                      radius={[4, 4, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -426,10 +601,10 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
         </TabsContent>
 
         <TabsContent value="conversion" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">
+                <CardTitle className="text-sm font-medium">
                   Lead to Deal Rate
                 </CardTitle>
               </CardHeader>
@@ -437,14 +612,14 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
                 <div className="text-2xl font-bold">
                   {safeLeadToDealRate.toFixed(1)}%
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  Leads that convert to deals
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  {leads.length} leads → {deals.length} deals
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">
+                <CardTitle className="text-sm font-medium">
                   Deal to Won Rate
                 </CardTitle>
               </CardHeader>
@@ -452,14 +627,15 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
                 <div className="text-2xl font-bold">
                   {safeDealToWonRate.toFixed(1)}%
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  Deals that close successfully
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  {deals.length} deals →{" "}
+                  {dealsByStage["Deal Closed"]?.count || 0} won
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">
+                <CardTitle className="text-sm font-medium">
                   Lead to Won Rate
                 </CardTitle>
               </CardHeader>
@@ -467,9 +643,10 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
                 <div className="text-2xl font-bold">
                   {safeLeadToWonRate.toFixed(1)}%
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  Overall conversion rate
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  {leads.length} leads →{" "}
+                  {dealsByStage["Deal Closed"]?.count || 0} won
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -479,17 +656,22 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
               <CardTitle>Conversion Funnel</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px]">
+              <div className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={conversionData}
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 5,
+                    }}
                   >
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                     <XAxis dataKey="name" />
                     <YAxis />
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <RechartsTooltip />
-                    <Bar dataKey="value" fill="#4f46e5">
+                    <Tooltip />
+                    <Bar dataKey="value" fill={COLORS[2]} radius={[4, 4, 0, 0]}>
                       {conversionData.map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
@@ -510,15 +692,15 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
               <CardTitle>Lead Sources</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px]">
+              <div className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={finalLeadSourceData}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
-                      outerRadius={100}
+                      labelLine={true}
+                      outerRadius={120}
                       fill="#8884d8"
                       dataKey="value"
                       label={({ name, percent }) =>
@@ -532,10 +714,12 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
                         />
                       ))}
                     </Pie>
-                    <RechartsTooltip
-                      formatter={(value: any) => [value, "Leads"]}
+                    <Tooltip
+                      formatter={(value, name, props) => [
+                        value,
+                        props.payload.name,
+                      ]}
                     />
-                    <Legend />
                   </PieChart>
                 </ResponsiveContainer>
               </div>

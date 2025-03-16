@@ -1,12 +1,13 @@
 import { Metadata } from "next";
-import { Providers } from "@/app/providers";
+import { Providers } from "../providers";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { NotFoundBoundary } from "@/components/not-found-boundary";
 import { redirect } from "next/navigation";
-import { createClient } from "@/supabase/client";
+import { createClient } from "@/app/actions";
 import Sidebar from "@/components/dashboard/sidebar";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import UserOnboarding from "@/components/dashboard/user-onboarding";
+import MobileNavigation from "@/components/dashboard/mobile-responsive";
 
 export const metadata: Metadata = {
   title: "Dashboard - LeadFlow CRM",
@@ -40,6 +41,7 @@ export default async function DashboardLayout({
               </main>
             </div>
           </div>
+          <MobileNavigation />
           <UserOnboarding />
         </NotFoundBoundary>
       </ErrorBoundary>

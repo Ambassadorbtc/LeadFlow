@@ -1,5 +1,3 @@
-import DashboardNavbar from "@/components/dashboard-navbar";
-import Sidebar from "@/components/dashboard/sidebar";
 import { PIPELINE_STAGES } from "@/types/schema";
 import { BarChart3, DollarSign, TrendingUp } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -136,25 +134,19 @@ export default async function AnalyticsPage() {
   }));
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardNavbar />
-        <main className="flex-1 overflow-auto">
-          <AnalyticsClient
-            totalDeals={totalDeals}
-            totalValue={totalValue}
-            avgDealValue={avgDealValue}
-            winRate={winRate}
-            dealsByStage={dealsByStage}
-            monthlyData={monthlyData}
-            dealTypeData={dealTypeData}
-            deals={deals}
-            leads={leads}
-            contacts={contacts}
-          />
-        </main>
-      </div>
-    </div>
+    <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
+      <AnalyticsClient
+        totalDeals={totalDeals}
+        totalValue={totalValue}
+        avgDealValue={avgDealValue}
+        winRate={winRate}
+        dealsByStage={dealsByStage}
+        monthlyData={monthlyData}
+        dealTypeData={dealTypeData}
+        deals={deals}
+        leads={leads}
+        contacts={contacts}
+      />
+    </main>
   );
 }

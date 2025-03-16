@@ -62,6 +62,8 @@ export default function LeadsClientPage({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
 
   // Status options for filtering
   const statusOptions = [
@@ -105,7 +107,11 @@ export default function LeadsClientPage({
       }
 
       // Apply sorting
-      query = query.order(sortField, { ascending: sortOrder === "asc" });
+      const currentSortField = sortField || "created_at";
+      const currentSortOrder = sortOrder || "desc";
+      query = query.order(currentSortField, {
+        ascending: currentSortOrder === "asc",
+      });
 
       const { data, error } = await query;
 
@@ -221,6 +227,7 @@ export default function LeadsClientPage({
     setIsDeleting(true);
 
     try {
+      console.log("Deleting leads:", selectedLeads);
       const response = await fetch("/api/leads/delete", {
         method: "POST",
         headers: {
@@ -230,6 +237,7 @@ export default function LeadsClientPage({
       });
 
       const result = await response.json();
+      console.log("Delete response:", response.status, result);
 
       if (response.ok) {
         toast({
@@ -245,7 +253,7 @@ export default function LeadsClientPage({
 
         // Refresh leads
         setSelectedLeads([]);
-        fetchLeads();
+        await fetchLeads();
       } else {
         toast({
           title: "Deletion Failed",
@@ -288,26 +296,90 @@ export default function LeadsClientPage({
     }
   };
 
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredLeads.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
+  const handleItemsPerPageChange = (
+    e: React.ChangeEvent<HTMLSelectElement>,
+  ) => {
+    setItemsPerPage(Number(e.target.value));
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
+
   // Fetch leads when filters change
   useEffect(() => {
     fetchLeads();
+    setCurrentPage(1); // Reset to first page when filters change
   }, [searchTerm, statusFilter, sortField, sortOrder]);
 
   return (
     <div className="px-2 py-4 w-full overflow-x-auto bg-[#f6f6f8] dark:bg-gray-900">
       {/* Header Section */}
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-[#1a1a1a] dark:text-white">
-            Leads
-          </h1>
-          <div className="flex items-center mt-2">
-            <p className="text-[#6b7280] dark:text-gray-400 mr-4">
+      <header className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-center w-full">
+          <div>
+            <h1 className="text-3xl font-bold text-[#1a1a1a] dark:text-white">
+              Leads
+            </h1>
+            <p className="text-[#6b7280] dark:text-gray-400 mt-2">
               Manage your prospects and leads
             </p>
           </div>
+
+          <div className="flex items-center gap-3 mt-4 sm:mt-0">
+            {selectedLeads.length > 0 ? (
+              <Button
+                onClick={handleDeleteSelected}
+                variant="destructive"
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm"
+              >
+                <Trash2 className="h-5 w-5" />
+                <span>
+                  {isDeleting
+                    ? "Deleting..."
+                    : `Delete (${selectedLeads.length})`}
+                </span>
+              </Button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={handleExport}
+                  variant="outline"
+                  className="bg-white dark:bg-gray-800 border border-[#e5e7eb] dark:border-gray-700 text-[#4b5563] dark:text-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+                >
+                  <Download className="h-5 w-5" />
+                  <span>Export</span>
+                </Button>
+                <a
+                  href="/dashboard/leads/import"
+                  className="bg-white dark:bg-gray-800 border border-[#e5e7eb] dark:border-gray-700 text-[#4b5563] dark:text-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+                >
+                  <Plus className="h-5 w-5" />
+                  <span>Import Leads</span>
+                </a>
+                <Link
+                  href="/dashboard/leads/add"
+                  className="bg-[#4f46e5] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#4338ca] transition-colors shadow-sm"
+                >
+                  <Plus className="h-5 w-5" />
+                  <span>Add Lead</span>
+                </Link>
+                <div className="text-sm font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full">
+                  {filteredLeads.length} lead
+                  {filteredLeads.length !== 1 ? "s" : ""} in total
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-2 flex items-center w-full max-w-md">
+
+        <div className="mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-sm p-2 flex items-center w-full max-w-2xl">
           <Search className="text-gray-400 h-5 w-5 ml-2 mr-1" />
           <input
             type="text"
@@ -328,48 +400,6 @@ export default function LeadsClientPage({
               <X className="h-4 w-4" />
             </button>
           )}
-        </div>
-        <div className="flex gap-3 flex-wrap">
-          {selectedLeads.length > 0 ? (
-            <Button
-              onClick={handleDeleteSelected}
-              variant="destructive"
-              disabled={isDeleting}
-              className="px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm"
-            >
-              <Trash2 className="h-5 w-5" />
-              <span>
-                {isDeleting
-                  ? "Deleting..."
-                  : `Delete (${selectedLeads.length})`}
-              </span>
-            </Button>
-          ) : (
-            <>
-              <Button
-                onClick={handleExport}
-                variant="outline"
-                className="bg-white dark:bg-gray-800 border border-[#e5e7eb] dark:border-gray-700 text-[#4b5563] dark:text-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
-              >
-                <Download className="h-5 w-5" />
-                <span>Export</span>
-              </Button>
-              <a
-                href="/dashboard/leads/import"
-                className="bg-white dark:bg-gray-800 border border-[#e5e7eb] dark:border-gray-700 text-[#4b5563] dark:text-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
-              >
-                <Plus className="h-5 w-5" />
-                <span>Import Leads</span>
-              </a>
-            </>
-          )}
-          <Link
-            href="/dashboard/leads/add"
-            className="bg-[#4f46e5] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#4338ca] transition-colors shadow-sm"
-          >
-            <Plus className="h-5 w-5" />
-            <span>Add Lead</span>
-          </Link>
         </div>
       </header>
 
@@ -607,8 +637,8 @@ export default function LeadsClientPage({
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-[#f3f4f6] dark:divide-gray-700">
-              {filteredLeads && filteredLeads.length > 0 ? (
-                filteredLeads.map((lead) => (
+              {currentItems && currentItems.length > 0 ? (
+                currentItems.map((lead) => (
                   <tr
                     key={lead.id}
                     className="hover:bg-[#f9fafb] dark:hover:bg-gray-700 cursor-pointer transition-colors"
@@ -805,6 +835,106 @@ export default function LeadsClientPage({
               )}
             </tbody>
           </ResizableTable>
+
+          {/* Pagination Controls */}
+          {filteredLeads.length > itemsPerPage && (
+            <div className="flex justify-between items-center mt-4 px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center">
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  Showing{" "}
+                  <span className="font-medium">{indexOfFirstItem + 1}</span> to{" "}
+                  <span className="font-medium">
+                    {indexOfLastItem > filteredLeads.length
+                      ? filteredLeads.length
+                      : indexOfLastItem}
+                  </span>{" "}
+                  of <span className="font-medium">{filteredLeads.length}</span>{" "}
+                  results
+                </span>
+              </div>
+
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center">
+                  <label
+                    htmlFor="itemsPerPage"
+                    className="mr-2 text-sm text-gray-700 dark:text-gray-300"
+                  >
+                    Items per page:
+                  </label>
+                  <select
+                    id="itemsPerPage"
+                    value={itemsPerPage}
+                    onChange={handleItemsPerPageChange}
+                    className="border border-gray-300 dark:border-gray-600 rounded-md text-sm py-1 px-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                  >
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={200}>200</option>
+                    <option value={400}>400</option>
+                    <option value={600}>600</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => paginate(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                  >
+                    Previous
+                  </button>
+
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      // Show pages around current page
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => paginate(pageNum)}
+                          className={`px-3 py-1 border ${currentPage === pageNum ? "bg-blue-50 border-blue-500 text-blue-600 dark:bg-blue-900/30 dark:border-blue-400 dark:text-blue-300" : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"} rounded-md text-sm`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+
+                    {totalPages > 5 && currentPage < totalPages - 2 && (
+                      <>
+                        <span className="text-gray-500 dark:text-gray-400">
+                          ...
+                        </span>
+                        <button
+                          onClick={() => paginate(totalPages)}
+                          className={`px-3 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md text-sm`}
+                        >
+                          {totalPages}
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => paginate(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createClient } from "@/supabase/client";
+import { createClient } from "@/app/actions";
 import {
   BarChart,
   Bar,

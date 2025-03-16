@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
           default_language: formData.default_language,
           timezone: formData.timezone,
           date_format: formData.date_format,
+          disable_onboarding: formData.disable_onboarding,
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", user.id);
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
           default_language: formData.default_language,
           timezone: formData.timezone,
           date_format: formData.date_format,
+          disable_onboarding: formData.disable_onboarding,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         });

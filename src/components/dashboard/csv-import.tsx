@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, AlertCircle, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { createClient } from "@/supabase/client";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
@@ -13,18 +13,22 @@ type CSVImportProps = {
   onImport: (data: any[]) => void;
   type: "deals" | "contacts" | "companies" | "leads";
   isLoading?: boolean;
+  onFileSelect?: (file: File) => void;
 };
 
 export default function CSVImport({
   onImport,
   type,
   isLoading: initialLoading = false,
+  onFileSelect,
 }: CSVImportProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(initialLoading);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const supabase = createClient();
   const { toast } = useToast();
@@ -45,7 +49,50 @@ export default function CSVImport({
     }
 
     setFile(selectedFile);
+    if (onFileSelect) {
+      onFileSelect(selectedFile);
+    }
     parseCSV(selectedFile);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    setError(null);
+    setSuccess(null);
+
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+      if (!droppedFile.name.endsWith(".csv")) {
+        setError("Please upload a CSV file");
+        return;
+      }
+
+      setFile(droppedFile);
+      if (onFileSelect) {
+        onFileSelect(droppedFile);
+      }
+      parseCSV(droppedFile);
+    }
   };
 
   const parseCSV = (file: File) => {
@@ -53,30 +100,86 @@ export default function CSVImport({
     reader.onload = (e) => {
       try {
         const text = e.target?.result as string;
-        const lines = text.split("\n");
-        const headers = lines[0].split(",").map((header) => header.trim());
+        const lines = text.split(/\r?\n/);
+
+        if (lines.length === 0 || lines[0].trim() === "") {
+          setError("CSV file appears to be empty");
+          return;
+        }
+
+        // Parse headers safely
+        let headers: string[] = [];
+        try {
+          headers = parseCSVLine(lines[0]);
+        } catch (headerError) {
+          console.error("Error parsing CSV headers:", headerError);
+          setError("Error parsing CSV headers. Please check the format.");
+          return;
+        }
 
         const data = [];
+        // Only process up to 3 rows for preview
         for (let i = 1; i < Math.min(lines.length, 4); i++) {
           if (lines[i].trim() === "") continue;
 
-          const values = lines[i].split(",").map((value) => value.trim());
-          const entry: Record<string, string> = {};
+          try {
+            const values = parseCSVLine(lines[i]);
 
-          headers.forEach((header, index) => {
-            entry[header] = values[index] || "";
-          });
+            // Handle mismatched column counts
+            while (values.length < headers.length) values.push("");
+            if (values.length > headers.length) values.length = headers.length;
 
-          data.push(entry);
+            const entry: Record<string, string> = {};
+            headers.forEach((header, index) => {
+              entry[header] = values[index] || "";
+            });
+
+            data.push(entry);
+          } catch (rowError) {
+            console.error(`Error parsing CSV row ${i}:`, rowError);
+            // Continue with next row instead of failing the entire preview
+          }
         }
 
-        setPreview(data); // Show first 3 rows as preview
+        setPreview(data); // Show preview rows
       } catch (error) {
         console.error("Error parsing CSV:", error);
         setError("Error parsing CSV file. Please check the format.");
       }
     };
     reader.readAsText(file);
+  };
+
+  // Helper function to parse a CSV line, handling quoted values
+  const parseCSVLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+
+      if (char === '"') {
+        // Handle escaped quotes (double quotes inside quoted fields)
+        if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++; // Skip the next quote
+        } else {
+          // Toggle quote state
+          inQuotes = !inQuotes;
+        }
+      } else if (char === "," && !inQuotes) {
+        // End of field
+        result.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+
+    // Add the last field
+    result.push(current.trim());
+    return result;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,144 +191,61 @@ export default function CSVImport({
     setSuccess(null);
 
     try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const text = e.target?.result as string;
-          const lines = text.split("\n");
-          const headers = lines[0].split(",").map((header) => header.trim());
+      // Create FormData for direct API upload
+      const formData = new FormData();
+      formData.append("csvFile", file);
 
-          const data = [];
-          for (let i = 1; i < lines.length; i++) {
-            if (lines[i].trim() === "") continue;
+      // Send to API endpoint
+      const response = await fetch(`/api/${type}/import`, {
+        method: "POST",
+        body: formData,
+      });
 
-            const values = lines[i].split(",").map((value) => value.trim());
-            const entry: Record<string, string> = {};
+      const result = await response.json();
 
-            headers.forEach((header, index) => {
-              entry[header] = values[index] || "";
-            });
+      if (response.ok) {
+        const recordCount = result.leads?.length || 0;
+        setSuccess(`Successfully imported ${recordCount} ${type}`);
+        toast({
+          title: (
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <span>Import Successful</span>
+            </div>
+          ),
+          description: `${recordCount} records imported successfully.`,
+          variant: "success",
+        });
 
-            data.push(entry);
-          }
-
-          // Get current user
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-
-          if (!user) {
-            throw new Error("User not authenticated");
-          }
-
-          // Check for duplicates before importing
-          let skippedCount = 0;
-          const uniqueRecords = [];
-
-          for (const record of data) {
-            let isDuplicate = false;
-
-            // Check for duplicates based on type
-            if (type === "leads" && record.prospect_id) {
-              const { data: existingLeads } = await supabase
-                .from("leads")
-                .select("id")
-                .eq("prospect_id", record.prospect_id)
-                .eq("user_id", user.id);
-
-              if (existingLeads && existingLeads.length > 0) {
-                isDuplicate = true;
-                skippedCount++;
-              }
-            } else if (type === "contacts" && record.email) {
-              const { data: existingContacts } = await supabase
-                .from("contacts")
-                .select("id")
-                .eq("email", record.email)
-                .eq("user_id", user.id);
-
-              if (existingContacts && existingContacts.length > 0) {
-                isDuplicate = true;
-                skippedCount++;
-              }
-            } else if (type === "deals" && record.prospect_id) {
-              const { data: existingDeals } = await supabase
-                .from("deals")
-                .select("id")
-                .eq("prospect_id", record.prospect_id)
-                .eq("name", record.name)
-                .eq("user_id", user.id);
-
-              if (existingDeals && existingDeals.length > 0) {
-                isDuplicate = true;
-                skippedCount++;
-              }
-            } else if (type === "companies" && record.name) {
-              const { data: existingCompanies } = await supabase
-                .from("companies")
-                .select("id")
-                .eq("name", record.name)
-                .eq("user_id", user.id);
-
-              if (existingCompanies && existingCompanies.length > 0) {
-                isDuplicate = true;
-                skippedCount++;
-              }
-            }
-
-            if (!isDuplicate) {
-              uniqueRecords.push(record);
-            }
-          }
-
-          // Process the unique records
-          if (uniqueRecords.length > 0) {
-            // Add user_id to each record
-            const recordsWithUserId = uniqueRecords.map((record) => ({
-              ...record,
-              user_id: user.id,
-            }));
-
-            // Import the data
-            onImport(recordsWithUserId);
-          }
-
-          // Success message with information about skipped records
-          const successMessage =
-            skippedCount > 0
-              ? `Successfully imported ${uniqueRecords.length} ${type}. Skipped ${skippedCount} duplicate records.`
-              : `Successfully imported ${uniqueRecords.length} ${type}.`;
-
-          setSuccess(successMessage);
-
-          // Show toast notification
-          toast({
-            title: (
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-                <span>Import Successful</span>
-              </div>
-            ),
-            description: `${uniqueRecords.length} records imported successfully.`,
-            variant: "success",
-          });
-
-          // Redirect after a short delay
-          setTimeout(() => {
-            router.push(`/dashboard/${type}`);
-            router.refresh();
-          }, 2000);
-        } catch (error: any) {
-          console.error("Error processing CSV:", error);
-          setError(error.message || "Error processing CSV file");
-        } finally {
-          setIsLoading(false);
+        // Process the data for the parent component
+        if (result.leads) {
+          onImport(result.leads);
         }
-      };
-      reader.readAsText(file);
+
+        // Redirect after a short delay
+        setTimeout(() => {
+          router.push(`/dashboard/${type}`);
+          router.refresh();
+        }, 2000);
+      } else {
+        setError(result.error || `There was an error importing the ${type}.`);
+        toast({
+          title: "Import Failed",
+          description:
+            result.error || `There was an error importing the ${type}.`,
+          variant: "destructive",
+        });
+      }
     } catch (error: any) {
-      console.error("Error reading file:", error);
-      setError(error.message || "Error reading file");
+      console.error(`Error importing ${type}:`, error);
+      setError(error.message || `Error importing ${type}`);
+      toast({
+        title: "Import Failed",
+        description:
+          error.message || `There was an error importing the ${type}.`,
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -235,27 +255,33 @@ export default function CSVImport({
       <div className="space-y-4">
         <div>
           <Label htmlFor="csv-file">Upload CSV File</Label>
-          <div className="mt-2 flex items-center justify-center w-full">
-            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600">
-              <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <Upload className="w-8 h-8 mb-3 text-gray-400" />
-                <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                  <span className="font-semibold">Click to upload</span> or drag
-                  and drop
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  CSV file with {type} data
-                </p>
-              </div>
-              <Input
-                id="csv-file"
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={handleFileChange}
-                disabled={isLoading}
-              />
-            </label>
+          <div
+            className={`mt-2 flex flex-col items-center justify-center w-full h-32 border-2 ${isDragging ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-dashed border-gray-300 dark:border-gray-600"} rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDragEnter={handleDragEnter}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+              <Upload className="w-8 h-8 mb-3 text-gray-400" />
+              <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                <span className="font-semibold">Click to upload</span> or drag
+                and drop
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                CSV file with {type} data
+              </p>
+            </div>
+            <Input
+              id="csv-file"
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleFileChange}
+              disabled={isLoading}
+            />
           </div>
           {file && (
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">

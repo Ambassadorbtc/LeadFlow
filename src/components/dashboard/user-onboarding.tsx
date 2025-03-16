@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -36,6 +35,7 @@ interface OnboardingStep {
 
 export default function UserOnboarding() {
   const [open, setOpen] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   const [steps, setSteps] = useState<OnboardingStep[]>([
     {
       id: "profile",
@@ -83,6 +83,10 @@ export default function UserOnboarding() {
   const router = useRouter();
 
   useEffect(() => {
+    // Prevent multiple initializations
+    if (initialized) return;
+    setInitialized(true);
+
     const checkOnboardingStatus = async () => {
       try {
         const supabase = createClient();
@@ -93,6 +97,37 @@ export default function UserOnboarding() {
 
         if (userError || !userData?.user) {
           console.error("Error getting user:", userError);
+          return;
+        }
+
+        // Check if this is a specific user we want to skip onboarding for
+        const { data: userDetails } = await supabase
+          .from("users")
+          .select("email")
+          .eq("id", userData.user.id)
+          .single();
+
+        // Skip onboarding for specific users (case insensitive)
+        if (
+          userDetails?.email &&
+          (userDetails.email.toLowerCase() === "ibbysj@gmail.com" ||
+            userDetails.email.toLowerCase() === "admin@leadflowapp.online")
+        ) {
+          // Automatically mark onboarding as completed and disable future popups
+          try {
+            await supabase.from("user_settings").upsert(
+              {
+                user_id: userData.user.id,
+                onboarding_completed: true,
+                disable_onboarding: true,
+              },
+              { onConflict: "user_id" },
+            );
+          } catch (error) {
+            console.error("Error updating user settings:", error);
+          }
+          setIsFirstLogin(false);
+          setOpen(false); // Ensure popup is closed for these users
           return;
         }
 
@@ -116,10 +151,19 @@ export default function UserOnboarding() {
           return;
         }
 
-        // Check if onboarding_completed flag exists and is false
-        if (settingsData.onboarding_completed === false) {
+        // Check if onboarding should be shown
+        if (settingsData.disable_onboarding === true) {
+          // Never show onboarding if explicitly disabled
+          setIsFirstLogin(false);
+          setOpen(false);
+        } else if (settingsData.onboarding_completed !== true) {
+          // Show onboarding if not completed and not disabled
           setIsFirstLogin(true);
           setOpen(true);
+        } else {
+          // If onboarding is completed but not disabled, don't show
+          setIsFirstLogin(false);
+          setOpen(false);
         }
 
         // Check completion status of each step
@@ -224,6 +268,29 @@ export default function UserOnboarding() {
     }
   };
 
+  const handleNeverShowAgain = async () => {
+    try {
+      const supabase = createClient();
+      const { data: userData } = await supabase.auth.getUser();
+
+      if (userData?.user) {
+        // Update user settings to disable onboarding permanently
+        await supabase.from("user_settings").upsert(
+          {
+            user_id: userData.user.id,
+            onboarding_completed: true,
+            disable_onboarding: true,
+          },
+          { onConflict: "user_id" },
+        );
+      }
+
+      setOpen(false);
+    } catch (error) {
+      console.error("Error disabling onboarding:", error);
+    }
+  };
+
   const handleFinish = async () => {
     try {
       const supabase = createClient();
@@ -246,11 +313,14 @@ export default function UserOnboarding() {
     }
   };
 
-  // If all steps are completed, don't show the onboarding
+  // If all steps are completed or this is a specific user, don't show the onboarding
   const allStepsCompleted = steps.every((step) => step.completed);
-  if (allStepsCompleted && isFirstLogin) {
-    handleFinish();
-  }
+
+  useEffect(() => {
+    if (allStepsCompleted && isFirstLogin) {
+      handleFinish();
+    }
+  }, [allStepsCompleted, isFirstLogin]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -276,23 +346,13 @@ export default function UserOnboarding() {
             {steps.map((step) => (
               <Card
                 key={step.id}
-                className={cn(
-                  "cursor-pointer transition-all",
-                  step.completed
-                    ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                    : "",
-                )}
+                className={`cursor-pointer transition-all ${step.completed ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" : ""}`}
                 onClick={() => handleStepClick(step.path)}
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <div
-                      className={cn(
-                        "p-2 rounded-full",
-                        step.completed
-                          ? "bg-green-100 dark:bg-green-800"
-                          : "bg-gray-100 dark:bg-gray-800",
-                      )}
+                      className={`p-2 rounded-full ${step.completed ? "bg-green-100 dark:bg-green-800" : "bg-gray-100 dark:bg-gray-800"}`}
                     >
                       {step.completed ? (
                         <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
@@ -314,10 +374,19 @@ export default function UserOnboarding() {
           </div>
         </div>
 
-        <DialogFooter className="sm:justify-between">
-          <Button variant="outline" onClick={handleSkip}>
-            Skip for now
-          </Button>
+        <DialogFooter className="sm:justify-between flex-col sm:flex-row gap-2">
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleSkip}>
+              Skip for now
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleNeverShowAgain}
+              className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-red-800 dark:hover:bg-red-900/20"
+            >
+              Never show again
+            </Button>
+          </div>
           <Button onClick={handleFinish} disabled={progress < 60}>
             {progress < 60 ? "Complete more steps" : "Finish setup"}
           </Button>

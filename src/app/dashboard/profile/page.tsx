@@ -1,5 +1,3 @@
-import DashboardNavbar from "@/components/dashboard-navbar";
-import Sidebar from "@/components/dashboard/sidebar";
 import { redirect } from "next/navigation";
 import { createClient } from "@/app/actions";
 import ProfileClient from "./profile-client";
@@ -43,19 +41,13 @@ export default async function ProfilePage() {
     .limit(5);
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardNavbar />
-        <main className="flex-1 overflow-auto">
-          <ProfileClient
-            user={user}
-            profile={profile || {}}
-            recentDeals={recentDeals}
-            recentContacts={recentContacts}
-          />
-        </main>
-      </div>
-    </div>
+    <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
+      <ProfileClient
+        user={user}
+        profile={profile || {}}
+        recentDeals={recentDeals}
+        recentContacts={recentContacts}
+      />
+    </main>
   );
 }

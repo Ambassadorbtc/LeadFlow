@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -103,20 +103,22 @@ export default function PipelineView({
     [draggedDeal, deals, supabase],
   );
 
-  const getStageDeals = useMemo(() => {
-    return (stage: string) => {
+  const getStageDeals = useCallback(
+    (stage: string) => {
       return deals.filter((deal) => deal.stage === stage);
-    };
-  }, [deals]);
+    },
+    [deals],
+  );
 
-  const calculateStageTotal = useMemo(() => {
-    return (stage: string) => {
+  const calculateStageTotal = useCallback(
+    (stage: string) => {
       return getStageDeals(stage).reduce((sum, deal) => {
         const dealValue = Number(deal.value || 0);
         return sum + (isNaN(dealValue) ? 0 : dealValue);
       }, 0);
-    };
-  }, [getStageDeals]);
+    },
+    [getStageDeals],
+  );
 
   const handleViewDeal = useCallback(
     (dealId: string) => {

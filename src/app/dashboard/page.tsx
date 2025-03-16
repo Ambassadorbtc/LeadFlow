@@ -1,5 +1,3 @@
-import DashboardNavbar from "@/components/dashboard-navbar";
-import Sidebar from "@/components/dashboard/sidebar";
 import { redirect } from "next/navigation";
 import { createClient } from "@/app/actions";
 import DashboardClient from "./dashboard-client";
@@ -51,22 +49,14 @@ export default async function Dashboard() {
   const serializedDealsByStage = await serializeSupabaseData(dealsByStage);
 
   return (
-    <div className="flex h-screen bg-[#f6f6f8] dark:bg-gray-900">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardNavbar />
-        <main className="flex-1 overflow-auto">
-          <DashboardClient
-            user={user}
-            deals={serializedDeals}
-            contacts={serializedContacts}
-            totalDeals={totalDeals}
-            totalValue={totalValue}
-            totalContacts={totalContacts}
-            dealsByStage={serializedDealsByStage}
-          />
-        </main>
-      </div>
-    </div>
+    <DashboardClient
+      user={user}
+      deals={serializedDeals}
+      contacts={serializedContacts}
+      totalDeals={totalDeals}
+      totalValue={totalValue}
+      totalContacts={totalContacts}
+      dealsByStage={serializedDealsByStage}
+    />
   );
 }

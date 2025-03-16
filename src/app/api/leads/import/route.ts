@@ -1,5 +1,6 @@
 import { createClient } from "@/app/actions";
 import { NextRequest, NextResponse } from "next/server";
+import { parseCSV, mapCSVToLeads } from "@/app/dashboard/leads/csv-parser";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -50,86 +51,90 @@ export async function POST(request: NextRequest) {
     const fileContent = await csvFile.text();
     const rows = fileContent.split("\n");
 
-    // Parse headers (first row)
-    const headers = rows[0].split(",").map((header) => header.trim());
-
-    // Validate required headers
-    const requiredHeaders = ["business_name", "contact_name"];
-    const missingHeaders = requiredHeaders.filter(
-      (header) => !headers.includes(header),
-    );
-
-    if (missingHeaders.length > 0) {
+    if (rows.length === 0 || rows[0].trim() === "") {
       return NextResponse.json(
-        {
-          error: `Missing required headers: ${missingHeaders.join(", ")}`,
-        },
+        { error: "CSV file is empty or invalid" },
         { status: 400 },
       );
     }
 
-    // Parse data rows
-    const leads = [];
-    for (let i = 1; i < rows.length; i++) {
-      if (!rows[i].trim()) continue; // Skip empty rows
+    // Parse data rows using the improved CSV parser
+    const csvText = fileContent;
+    const parsedRows = parseCSV(csvText);
 
-      const values = rows[i].split(",").map((value) => value.trim());
-      if (values.length !== headers.length) continue; // Skip malformed rows
-
-      const lead: Record<string, any> = {};
-      headers.forEach((header, index) => {
-        lead[header] = values[index];
-      });
-
-      // Add required fields if missing
-      lead.user_id = user.id;
-      lead.created_at = new Date().toISOString();
-      lead.updated_at = new Date().toISOString();
-      lead.status = lead.status || "New";
-      lead.prospect_id =
-        lead.prospect_id || `LEAD-${Math.floor(Math.random() * 10000)}`;
-
-      // Convert numeric values
-      if (lead.deal_value) {
-        lead.deal_value = parseFloat(lead.deal_value) || 0;
-      }
-
-      // Convert boolean values
-      if (lead.bf_interest) {
-        lead.bf_interest =
-          lead.bf_interest.toLowerCase() === "true" || lead.bf_interest === "1";
-      }
-      if (lead.ct_interest) {
-        lead.ct_interest =
-          lead.ct_interest.toLowerCase() === "true" || lead.ct_interest === "1";
-      }
-      if (lead.ba_interest) {
-        lead.ba_interest =
-          lead.ba_interest.toLowerCase() === "true" || lead.ba_interest === "1";
-      }
-
-      leads.push(lead);
-    }
-
-    if (leads.length === 0) {
+    if (parsedRows.length === 0) {
       return NextResponse.json(
-        { error: "No valid leads found in CSV" },
+        { error: "No valid data found in CSV file" },
         { status: 400 },
       );
     }
 
-    // Insert leads into database
-    const { data, error } = await supabase.from("leads").insert(leads).select();
+    const leads = mapCSVToLeads(parsedRows, user.id);
+
+    // Create an import history record
+    const { data: importRecord, error: importHistoryError } = await supabase
+      .from("import_history")
+      .insert({
+        user_id: user.id,
+        import_type: "leads",
+        file_name: csvFile.name,
+        record_count: leads.length,
+        status: "processing",
+        metadata: { source: "api_upload" },
+      })
+      .select()
+      .single();
+
+    if (importHistoryError) {
+      console.error("Error creating import history:", importHistoryError);
+      return NextResponse.json(
+        { error: importHistoryError.message },
+        { status: 500 },
+      );
+    }
+
+    // Add import batch ID to each lead
+    leads.forEach((lead) => {
+      lead.import_batch_id = importRecord.id;
+    });
+
+    // Insert leads into database with conflict handling
+    const { data, error } = await supabase
+      .from("leads")
+      .upsert(leads, { onConflict: "prospect_id", ignoreDuplicates: false })
+      .select();
 
     if (error) {
+      // Update import history to failed
+      await supabase
+        .from("import_history")
+        .update({
+          status: "failed",
+          metadata: { error: error.message },
+        })
+        .eq("id", importRecord.id);
+
       console.error("Error inserting leads:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Update import history to completed
+    await supabase
+      .from("import_history")
+      .update({
+        status: "completed",
+        metadata: {
+          ...importRecord.metadata,
+          completed_at: new Date().toISOString(),
+        },
+      })
+      .eq("id", importRecord.id);
 
     return NextResponse.json({
       success: true,
       message: `Successfully imported ${leads.length} leads`,
       leads: data,
+      importId: importRecord.id,
     });
   } catch (error: any) {
     console.error("Error importing leads:", error);

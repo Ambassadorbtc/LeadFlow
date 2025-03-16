@@ -10,6 +10,7 @@ import {
   LogOut,
   Server,
   Wrench,
+  RefreshCw,
 } from "lucide-react";
 import { createClient } from "@/supabase/client";
 
@@ -32,6 +33,11 @@ export default function AdminSidebar() {
       name: "Users",
       href: "/admin/users",
       icon: <Users className="h-5 w-5" />,
+    },
+    {
+      name: "Onboarding Management",
+      href: "/admin/users/onboarding-management",
+      icon: <RefreshCw className="h-5 w-5" />,
     },
     {
       name: "Reports",

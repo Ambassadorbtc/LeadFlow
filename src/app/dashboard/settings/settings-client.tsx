@@ -39,6 +39,7 @@ import {
   Globe,
   Mail,
 } from "lucide-react";
+import OnboardingSettings from "./onboarding-settings";
 
 export default function SettingsClient({
   user,
@@ -63,6 +64,7 @@ export default function SettingsClient({
     default_language: settings.default_language || "en",
     timezone: settings.timezone || "UTC",
     date_format: settings.date_format || "MM/DD/YYYY",
+    disable_onboarding: settings.disable_onboarding === true,
     password: "",
     confirmPassword: "",
   });
@@ -217,6 +219,7 @@ export default function SettingsClient({
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
+          <OnboardingSettings />
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">

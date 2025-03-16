@@ -1,79 +1,64 @@
 # Deployment Checklist for LeadFlow CRM
 
-## Environment Variables
-- [x] NEXT_PUBLIC_SUPABASE_URL - Already configured in vercel.json
-- [x] NEXT_PUBLIC_SUPABASE_ANON_KEY - Already configured in vercel.json
-- [x] SUPABASE_SERVICE_KEY - Already configured in vercel.json
-- [x] SUPABASE_PROJECT_ID - Must be set for edge functions
-- [x] NEXT_PUBLIC_TEMPO - Set to "true" in .env
+## Fixed Issues
+- [x] Double header and navigation on dashboard pages
+- [x] Lead count positioning improved
+- [x] User onboarding popup still showing for ibbysj@gmail.com
 
-## Edge Functions
-- [ ] sync_auth_users is deployed and working
-- [ ] create_users_table_if_not_exists is deployed and working
-- [ ] create_user_settings_if_not_exists is deployed and working
-- [ ] add_missing_columns is deployed and working
-- [ ] Edge Functions have proper CORS headers
-- [ ] Edge Functions have correct environment variables
+## Remaining Issues
 
-## Database Setup
-- [x] Run all migrations
-- [ ] Verify all tables exist
-  - [ ] users
-  - [ ] leads
-  - [ ] deals
-  - [ ] contacts
-  - [ ] companies
-  - [ ] notifications
-  - [ ] user_settings
-  - [ ] system_settings
-- [ ] Set up RLS policies
-- [ ] Enable realtime for required tables
+### UI Issues
+- [ ] Inconsistent styling between dark and light mode in some components
+- [ ] Mobile responsiveness could be improved on some pages
+- [ ] Form validation feedback could be more consistent
 
-## Authentication
-- [ ] Verify auth.users and public.users are synchronized
-- [ ] Test password reset functionality
-- [ ] Test sign-up and sign-in flows
+### Database Issues
+- [ ] Some users may have duplicate records in the users table
+- [ ] Need to verify all required tables exist in production
 
-## API Routes
-- [ ] Run /api/verify-deployment to check deployment status
-- [ ] Run /api/test-database to verify database connection and tables
-- [ ] Run /api/test-auth to verify authentication system
-- [ ] Run /api/test-api-routes to verify all critical API routes
-- [ ] Run /api/env-check to verify all environment variables are set
-- [ ] Run /api/health to check system health
+### Performance Issues
+- [ ] Large data sets in tables could benefit from pagination or virtualization
+- [ ] Some API routes could be optimized for faster response times
+- [ ] Image optimization for faster loading
 
-## Build and Deploy
-- [x] Build the Next.js application
-- [x] Deploy to hosting platform
+### Feature Completeness
+- [ ] CSV import functionality could use better error handling
+- [ ] Export functionality could support more formats (currently only CSV)
+- [ ] Notification system could be enhanced with real-time updates
 
-## Post-Deployment Verification
-- [ ] Verify all pages load correctly
-- [ ] Test authentication flows
-- [ ] Verify database connections
-- [ ] Check for any console errors
-- [ ] Test on multiple browsers and devices
+### Code Quality
+- [ ] Some components could benefit from better type definitions
+- [ ] Error handling could be more consistent across the application
+- [ ] Test coverage could be improved
 
-## Performance
-- [ ] Verify API response times are acceptable
-- [ ] Check page load times
-- [ ] Monitor for any performance issues
+### Deployment Requirements
+- [ ] Ensure all edge functions are properly deployed
+- [ ] Verify all environment variables are correctly set in Vercel
+- [ ] Set up proper error logging and monitoring
 
-## Security
-- [ ] Verify authentication is enabled
-- [ ] Check RLS policies are working
-- [ ] Ensure service role is properly restricted
+## Pre-Deployment Checklist
 
-## Monitoring and Maintenance
-- [ ] Set up monitoring for API endpoints
-- [ ] Configure error logging
-- [ ] Set up alerts for critical failures
-- [ ] Verify Supabase backup is configured
+1. **Environment Variables**
+   - [ ] NEXT_PUBLIC_SUPABASE_URL
+   - [ ] NEXT_PUBLIC_SUPABASE_ANON_KEY
+   - [ ] SUPABASE_SERVICE_KEY
+   - [ ] SUPABASE_PROJECT_ID
 
-## Rollback Plan
-- [ ] Document rollback procedure
-- [ ] Ensure previous version is available for rollback
-- [ ] Test rollback process
+2. **Build Process**
+   - [ ] Run `npm run build` to verify no build errors
+   - [ ] Check for any console warnings during build
 
-## User Notification System
-- [ ] Verify notification system is working
-- [ ] Test notification creation and delivery
+3. **Database**
+   - [ ] Run all migrations
+   - [ ] Verify RLS policies are correctly set
+   - [ ] Check for any missing tables or columns
+
+4. **Edge Functions**
+   - [ ] Deploy all edge functions
+   - [ ] Test edge function endpoints
+
+5. **Final Checks**
+   - [ ] Test authentication flow
+   - [ ] Verify critical user journeys
+   - [ ] Check mobile responsiveness
+   - [ ] Test dark/light mode
