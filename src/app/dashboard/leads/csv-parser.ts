@@ -58,3 +58,45 @@ function parseCSVLine(line: string): string[] {
   result.push(current.trim());
   return result;
 }
+
+export function mapCSVToLeads(csvData: CSVRow[], userId: string) {
+  return csvData.map((row) => {
+    // Required fields
+    if (!row.business_name || !row.contact_name) {
+      throw new Error(
+        "CSV data missing required fields: business_name and contact_name",
+      );
+    }
+
+    // Convert boolean string values to actual booleans
+    const bfInterest = row.bf_interest
+      ? row.bf_interest.toLowerCase() === "true"
+      : false;
+    const ctInterest = row.ct_interest
+      ? row.ct_interest.toLowerCase() === "true"
+      : false;
+    const baInterest = row.ba_interest
+      ? row.ba_interest.toLowerCase() === "true"
+      : false;
+
+    // Convert deal value to number if present
+    const dealValue = row.deal_value ? parseFloat(row.deal_value) : null;
+
+    return {
+      business_name: row.business_name,
+      contact_name: row.contact_name,
+      email: row.email || null,
+      phone: row.phone || null,
+      status: row.status || "New",
+      source: row.source || "CSV Import",
+      notes: row.notes || null,
+      deal_value: dealValue,
+      bf_interest: bfInterest,
+      ct_interest: ctInterest,
+      ba_interest: baInterest,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      user_id: userId,
+    };
+  });
+}

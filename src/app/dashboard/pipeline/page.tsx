@@ -1,11 +1,9 @@
-import DashboardNavbar from "@/components/dashboard-navbar";
-import Sidebar from "@/components/dashboard/sidebar";
+// import DashboardNavbar from "@/components/dashboard-navbar";
+// import Sidebar from "@/components/dashboard/sidebar";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { createClient } from "@/app/actions";
+// import Link from "next/link";
+import { createClient } from "@/supabase/client";
 import PipelineClientPage from "./client-page";
-
-// This function is moved to client-page.tsx
 
 export default async function PipelinePage({
   searchParams,
@@ -43,14 +41,8 @@ export default async function PipelinePage({
     .order("created_at", { ascending: false });
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardNavbar />
-        <main className="flex-1 overflow-auto">
-          <PipelineClientPage deals={deals} leads={leads} />
-        </main>
-      </div>
-    </div>
+    <main className="flex-1 overflow-auto">
+      <PipelineClientPage deals={deals} leads={leads} />
+    </main>
   );
 }

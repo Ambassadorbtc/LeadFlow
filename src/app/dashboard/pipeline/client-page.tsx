@@ -1,12 +1,13 @@
 "use client";
 
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PIPELINE_STAGES } from "@/types/schema";
 import { DollarSign, Plus, Search, X } from "lucide-react";
-import { useState, useCallback, useMemo, useEffect } from "react";
-import { createClient } from "../../../../supabase/client";
+import { createClient } from "@/supabase/client";
 import { useRouter } from "next/navigation";
+import PipelineView from "@/components/dashboard/pipeline-view";
 
 type Deal = {
   id: string;
@@ -32,31 +33,6 @@ export const DEAL_TYPES = [
   "Booking App",
   "Other",
 ];
-
-// Run a check for any leads that should be converted to deals
-async function checkConversions() {
-  try {
-    console.log("Checking for leads to convert...");
-    const response = await fetch("/api/leads/check-conversion", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    console.log("Conversion check result:", result);
-    return result;
-  } catch (error) {
-    console.error("Error checking conversions:", error);
-    return null;
-  }
-}
 
 export default function PipelineClientPage({
   deals = [],

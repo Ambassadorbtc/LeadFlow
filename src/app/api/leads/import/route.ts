@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
 
     // Get current user with improved error handling
-    const { data, error: authError } = await supabase.auth.getUser();
+    const { data: userData, error: authError } = await supabase.auth.getUser();
 
     if (authError) {
       console.error("Authentication error:", authError);
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!data?.user) {
+    if (!userData?.user) {
       // Try to refresh the session
       const { data: refreshData, error: refreshError } =
         await supabase.auth.refreshSession();
@@ -34,10 +34,10 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      data.user = refreshData.user;
+      userData.user = refreshData.user;
     }
 
-    const { user } = data;
+    const { user } = userData;
 
     if (!csvFile) {
       return NextResponse.json(

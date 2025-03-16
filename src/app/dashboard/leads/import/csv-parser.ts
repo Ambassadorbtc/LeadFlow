@@ -1,5 +1,7 @@
 import { CSVRow } from "../csv-parser";
 
+export { CSVRow };
+
 export function mapCSVToLeads(csvData: CSVRow[], userId: string) {
   return csvData.map((row) => ({
     prospect_id: row.prospect_id || `LEAD-${Math.floor(Math.random() * 10000)}`,

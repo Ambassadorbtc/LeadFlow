@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { PIPELINE_STAGES } from "@/types/schema";
 import {
   BarChart3,
@@ -21,7 +22,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   Legend,
   PieChart,
@@ -206,167 +207,110 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
     });
   })();
 
-  // Only use real data from deals, no fallbacks
-  const calculatedDealTypeData = deals.reduce(
-    (acc, deal) => {
-      const type = deal.deal_type || "Other";
-      if (!acc[type]) {
-        acc[type] = 0;
-      }
-      acc[type] += Number(deal.value || 0);
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
-
-  // Convert to array format for the chart
-  const dealTypeData = Object.entries(calculatedDealTypeData)
-    .map(([name, value]) => ({
-      name,
-      value,
-    }))
-    .sort((a, b) => b.value - a.value);
-
-  // Only use real data, no fallbacks
-  const finalMonthlyData = generatedMonthlyData;
-  const finalDealTypeData = dealTypeData;
-
   return (
-    <div className="px-4 py-8 max-w-[1400px] mx-auto">
-      {/* Header Section */}
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold dark:text-white">Sales Analytics</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">
-          Track your sales performance and pipeline metrics
-        </p>
-      </header>
+    <div className="space-y-8">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Total Deals
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalDeals}</div>
+            <div className="text-xs text-gray-500 mt-1">
+              Active deals in pipeline
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Total Value
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ${totalValue.toLocaleString()}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Sum of all deal values
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Avg Deal Value
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ${avgDealValue.toLocaleString()}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Average value per deal
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">
+              Win Rate
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{winRate}%</div>
+            <div className="text-xs text-gray-500 mt-1">
+              Closed deals conversion
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="mb-6">
+      {/* Charts Section */}
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
           <TabsTrigger value="conversion">Conversion</TabsTrigger>
-          <TabsTrigger value="trends">Trends</TabsTrigger>
+          <TabsTrigger value="sources">Lead Sources</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">
-                    Total Deals
-                  </h3>
-                  <div className="rounded-full bg-blue-100 dark:bg-blue-900/50 p-2">
-                    <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                </div>
-                <div className="text-3xl font-bold dark:text-white">
-                  {totalDeals}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  Across all pipeline stages
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">
-                    Total Value
-                  </h3>
-                  <div className="rounded-full bg-green-100 dark:bg-green-900/50 p-2">
-                    <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  </div>
-                </div>
-                <div className="text-3xl font-bold dark:text-white">
-                  ${totalValue.toLocaleString()}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  Sum of all deal values
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">
-                    Avg. Deal Value
-                  </h3>
-                  <div className="rounded-full bg-purple-100 dark:bg-purple-900/50 p-2">
-                    <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                </div>
-                <div className="text-3xl font-bold dark:text-white">
-                  $
-                  {avgDealValue.toLocaleString(undefined, {
-                    maximumFractionDigits: 0,
-                  })}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  Average value per deal
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">
-                    Win Rate
-                  </h3>
-                  <div className="rounded-full bg-orange-100 dark:bg-orange-900/50 p-2">
-                    <BarChart3 className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                  </div>
-                </div>
-                <div className="text-3xl font-bold dark:text-white">
-                  {winRate.toFixed(1)}%
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  {dealsByStage["Deal Closed"]?.count || 0} won /{" "}
-                  {(dealsByStage["Deal Closed"]?.count || 0) +
-                    (dealsByStage["Deal Lost"]?.count || 0)}{" "}
-                  closed
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sales Trend Chart */}
+        <TabsContent value="overview" className="space-y-4">
           <Card>
-            <CardHeader className="pb-0">
-              <div className="flex items-center justify-between">
-                <CardTitle>Sales Trend</CardTitle>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => setChartType("area")}
-                    className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${chartType === "area" ? "bg-blue-600 text-white dark:bg-blue-600 dark:text-white" : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-                  >
-                    Area
-                  </button>
-                  <button
-                    onClick={() => setChartType("bar")}
-                    className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${chartType === "bar" ? "bg-blue-600 text-white dark:bg-blue-600 dark:text-white" : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-                  >
-                    Bar
-                  </button>
-                  <button
-                    onClick={() => setChartType("line")}
-                    className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${chartType === "line" ? "bg-blue-600 text-white dark:bg-blue-600 dark:text-white" : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-                  >
-                    Line
-                  </button>
-                </div>
+            <CardHeader>
+              <CardTitle>Monthly Performance</CardTitle>
+              <div className="flex space-x-2">
+                <Button
+                  variant={chartType === "area" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setChartType("area")}
+                >
+                  Area
+                </Button>
+                <Button
+                  variant={chartType === "bar" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setChartType("bar")}
+                >
+                  Bar
+                </Button>
+                <Button
+                  variant={chartType === "line" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setChartType("line")}
+                >
+                  Line
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="h-80 mt-4">
+              <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   {chartType === "area" ? (
-                    <AreaChart data={finalMonthlyData}>
+                    <AreaChart data={generatedMonthlyData}>
                       <defs>
                         <linearGradient
                           id="colorValue"
@@ -383,47 +327,18 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
                           <stop
                             offset="95%"
                             stopColor="#4f46e5"
-                            stopOpacity={0}
+                            stopOpacity={0.1}
                           />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke="#e5e7eb"
-                        className="dark:stroke-gray-700"
-                      />
-                      <XAxis
-                        dataKey="name"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: "#6b7280" }}
-                        className="dark:text-gray-400"
-                      />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: "#6b7280" }}
-                        className="dark:text-gray-400"
-                        tickFormatter={(value) => `$${value.toLocaleString()}`}
-                      />
-                      <Tooltip
-                        formatter={(value) => [
-                          `$${Number(value).toLocaleString()}`,
-                          "Sales",
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <RechartsTooltip
+                        formatter={(value: any) => [
+                          `${value.toLocaleString()}`,
+                          "Value",
                         ]}
-                        labelFormatter={(label) => `${label}`}
-                        contentStyle={{
-                          backgroundColor: "white",
-                          borderRadius: "0.375rem",
-                          boxShadow:
-                            "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
-                          border: "none",
-                          padding: "0.5rem",
-                        }}
-                        itemStyle={{ color: "#4f46e5" }}
-                        labelStyle={{ color: "#111827" }}
-                        className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
                       />
                       <Area
                         type="monotone"
@@ -431,105 +346,43 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
                         stroke="#4f46e5"
                         fillOpacity={1}
                         fill="url(#colorValue)"
-                        strokeWidth={2}
                       />
                     </AreaChart>
                   ) : chartType === "bar" ? (
-                    <BarChart data={finalMonthlyData}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke="#e5e7eb"
-                        className="dark:stroke-gray-700"
-                      />
-                      <XAxis
-                        dataKey="name"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: "#6b7280" }}
-                        className="dark:text-gray-400"
-                      />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: "#6b7280" }}
-                        className="dark:text-gray-400"
-                        tickFormatter={(value) => `$${value.toLocaleString()}`}
-                      />
-                      <Tooltip
-                        formatter={(value) => [
-                          `$${Number(value).toLocaleString()}`,
-                          "Sales",
+                    <BarChart data={generatedMonthlyData}>
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <RechartsTooltip
+                        formatter={(value: any) => [
+                          `${value.toLocaleString()}`,
+                          "Value",
                         ]}
-                        labelFormatter={(label) => `${label}`}
-                        contentStyle={{
-                          backgroundColor: "white",
-                          borderRadius: "0.375rem",
-                          boxShadow:
-                            "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
-                          border: "none",
-                          padding: "0.5rem",
-                        }}
-                        itemStyle={{ color: "#10b981" }}
-                        labelStyle={{ color: "#111827" }}
-                        className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
                       />
                       <Bar
                         dataKey="value"
-                        fill="#10b981"
+                        fill="#4f46e5"
                         radius={[4, 4, 0, 0]}
-                        barSize={20}
                       />
                     </BarChart>
                   ) : (
-                    <LineChart
-                      data={finalMonthlyData.filter((item) => item.value > 0)}
-                    >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke="#e5e7eb"
-                        className="dark:stroke-gray-700"
-                      />
-                      <XAxis
-                        dataKey="name"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: "#6b7280" }}
-                        className="dark:text-gray-400"
-                      />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: "#6b7280" }}
-                        className="dark:text-gray-400"
-                        tickFormatter={(value) => `$${value.toLocaleString()}`}
-                      />
-                      <Tooltip
-                        formatter={(value) => [
-                          `$${Number(value).toLocaleString()}`,
-                          "Sales",
+                    <LineChart data={generatedMonthlyData}>
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <RechartsTooltip
+                        formatter={(value: any) => [
+                          `${value.toLocaleString()}`,
+                          "Value",
                         ]}
-                        labelFormatter={(label) => `${label}`}
-                        contentStyle={{
-                          backgroundColor: "white",
-                          borderRadius: "0.375rem",
-                          boxShadow:
-                            "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
-                          border: "none",
-                          padding: "0.5rem",
-                        }}
-                        itemStyle={{ color: "#8b5cf6" }}
-                        labelStyle={{ color: "#111827" }}
-                        className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
                       />
                       <Line
                         type="monotone"
                         dataKey="value"
-                        stroke="#8b5cf6"
+                        stroke="#4f46e5"
                         strokeWidth={2}
-                        dot={{ r: 4, fill: "#8b5cf6" }}
-                        activeDot={{ r: 6, fill: "#8b5cf6" }}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
                       />
                     </LineChart>
                   )}
@@ -537,265 +390,34 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
               </div>
             </CardContent>
           </Card>
-
-          {/* Deal Type Distribution */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Deal Type Distribution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={finalDealTypeData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        paddingAngle={2}
-                        label={({ name, percent }) =>
-                          `${name}: ${(percent * 100).toFixed(0)}%`
-                        }
-                      >
-                        {finalDealTypeData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={COLORS[index % COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value) => [
-                          `$${Number(value).toLocaleString()}`,
-                          "Value",
-                        ]}
-                        contentStyle={{
-                          backgroundColor: "white",
-                          borderRadius: "0.375rem",
-                          boxShadow:
-                            "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
-                          border: "none",
-                          padding: "0.5rem",
-                        }}
-                        className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Lead Sources</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={finalLeadSourceData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        paddingAngle={2}
-                        label={({ name, percent }) =>
-                          `${name}: ${(percent * 100).toFixed(0)}%`
-                        }
-                      >
-                        {finalLeadSourceData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={COLORS[(index + 3) % COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value) => [value, "Leads"]}
-                        contentStyle={{
-                          backgroundColor: "white",
-                          borderRadius: "0.375rem",
-                          boxShadow:
-                            "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
-                          border: "none",
-                          padding: "0.5rem",
-                        }}
-                        className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
 
-        <TabsContent value="pipeline" className="space-y-6">
-          {/* Pipeline Analysis */}
+        <TabsContent value="pipeline" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Pipeline Stage Analysis</CardTitle>
+              <CardTitle>Deal Stages</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {PIPELINE_STAGES.map((stage) => {
-                  const stageData = dealsByStage[stage] || {
-                    count: 0,
-                    value: 0,
-                  };
-                  const percentage =
-                    totalDeals > 0 ? (stageData.count / totalDeals) * 100 : 0;
-
-                  return (
-                    <div key={stage}>
-                      <div className="flex justify-between items-center mb-2">
-                        <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">
-                            {stage}
-                          </span>
-                          <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-                            ({stageData.count} deals)
-                          </span>
-                        </div>
-                        <span className="text-sm font-medium dark:text-gray-300">
-                          ${stageData.value.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                        <div
-                          className="bg-blue-600 h-2.5 rounded-full"
-                          style={{ width: `${percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Pipeline Visualization */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Pipeline Value Distribution</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
+              <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={stageData.filter((item) => item.value > 0)}
+                    data={stageData}
                     layout="vertical"
+                    margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
                   >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      horizontal={true}
-                      vertical={false}
-                      stroke="#e5e7eb"
-                      className="dark:stroke-gray-700"
+                    <XAxis type="number" />
+                    <YAxis type="category" dataKey="name" width={100} />
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <RechartsTooltip
+                      formatter={(value: any, name: any) =>
+                        name === "count"
+                          ? [value, "Deals"]
+                          : [`${value.toLocaleString()}`, "Value"]
+                      }
                     />
-                    <XAxis
-                      type="number"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: "#6b7280" }}
-                      className="dark:text-gray-400"
-                      tickFormatter={(value) => `$${value.toLocaleString()}`}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: "#6b7280" }}
-                      className="dark:text-gray-400"
-                      width={120}
-                    />
-                    <Tooltip
-                      formatter={(value) => [
-                        `$${Number(value).toLocaleString()}`,
-                        "Value",
-                      ]}
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderRadius: "0.375rem",
-                        boxShadow:
-                          "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
-                        border: "none",
-                        padding: "0.5rem",
-                      }}
-                      className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                    />
-                    <Bar
-                      dataKey="value"
-                      fill="#4f46e5"
-                      radius={[0, 4, 4, 0]}
-                      barSize={20}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Deal Count by Stage */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Deal Count by Stage</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stageData.filter((item) => item.count > 0)}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      stroke="#e5e7eb"
-                      className="dark:stroke-gray-700"
-                    />
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{
-                        fontSize: 12,
-                        fill: "#6b7280",
-                        angle: -45,
-                        textAnchor: "end",
-                      }}
-                      className="dark:text-gray-400"
-                      height={70}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: "#6b7280" }}
-                      className="dark:text-gray-400"
-                    />
-                    <Tooltip
-                      formatter={(value) => [value, "Deals"]}
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderRadius: "0.375rem",
-                        boxShadow:
-                          "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
-                        border: "none",
-                        padding: "0.5rem",
-                      }}
-                      className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                    />
-                    <Bar
-                      dataKey="count"
-                      fill="#8b5cf6"
-                      radius={[4, 4, 0, 0]}
-                      barSize={40}
-                    />
+                    <Legend />
+                    <Bar dataKey="count" fill="#8b5cf6" name="Deal Count" />
+                    <Bar dataKey="value" fill="#4f46e5" name="Deal Value" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -803,119 +425,76 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
           </Card>
         </TabsContent>
 
-        <TabsContent value="conversion" className="space-y-6">
-          {/* Conversion Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <TabsContent value="conversion" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">
-                    Lead to Deal
-                  </h3>
-                  <div className="rounded-full bg-blue-100 dark:bg-blue-900/50 p-2">
-                    <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                </div>
-                <div className="text-3xl font-bold dark:text-white">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-500">
+                  Lead to Deal Rate
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
                   {safeLeadToDealRate.toFixed(1)}%
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  {deals.length} deals from {leads.length} leads
+                <div className="text-xs text-gray-500 mt-1">
+                  Leads that convert to deals
                 </div>
               </CardContent>
             </Card>
-
             <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">
-                    Deal to Won
-                  </h3>
-                  <div className="rounded-full bg-green-100 dark:bg-green-900/50 p-2">
-                    <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  </div>
-                </div>
-                <div className="text-3xl font-bold dark:text-white">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-500">
+                  Deal to Won Rate
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
                   {safeDealToWonRate.toFixed(1)}%
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  {dealsByStage["Deal Closed"]?.count || 0} won from{" "}
-                  {deals.length} deals
+                <div className="text-xs text-gray-500 mt-1">
+                  Deals that close successfully
                 </div>
               </CardContent>
             </Card>
-
             <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">
-                    Lead to Won
-                  </h3>
-                  <div className="rounded-full bg-purple-100 dark:bg-purple-900/50 p-2">
-                    <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                </div>
-                <div className="text-3xl font-bold dark:text-white">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-500">
+                  Lead to Won Rate
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
                   {safeLeadToWonRate.toFixed(1)}%
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  {dealsByStage["Deal Closed"]?.count || 0} won from{" "}
-                  {leads.length} leads
+                <div className="text-xs text-gray-500 mt-1">
+                  Overall conversion rate
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Conversion Funnel */}
           <Card>
             <CardHeader>
               <CardTitle>Conversion Funnel</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-80">
+              <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={conversionData.filter((item) => item.value > 0)}
+                    data={conversionData}
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                   >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      stroke="#e5e7eb"
-                      className="dark:stroke-gray-700"
-                    />
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: "#6b7280" }}
-                      className="dark:text-gray-400"
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: "#6b7280" }}
-                      className="dark:text-gray-400"
-                    />
-                    <Tooltip
-                      formatter={(value) => [value, "Count"]}
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderRadius: "0.375rem",
-                        boxShadow:
-                          "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
-                        border: "none",
-                        padding: "0.5rem",
-                      }}
-                      className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                    />
-                    <Bar
-                      dataKey="value"
-                      fill="#4f46e5"
-                      radius={[4, 4, 0, 0]}
-                      barSize={60}
-                    >
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <RechartsTooltip />
+                    <Bar dataKey="value" fill="#4f46e5">
                       {conversionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % 3]} />
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
                       ))}
                     </Bar>
                   </BarChart>
@@ -923,208 +502,41 @@ export default function AnalyticsClient(props: AnalyticsClientProps) {
               </div>
             </CardContent>
           </Card>
-
-          {/* Conversion Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <UserCircle className="h-5 w-5 mr-2" />
-                  Leads
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-6">
-                  <div className="text-5xl font-bold mb-2 dark:text-white">
-                    {leads.length}
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Total leads in the system
-                  </div>
-                </div>
-                <div className="space-y-2 mt-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      New
-                    </span>
-                    <span className="font-medium dark:text-gray-300">
-                      {leads.filter((l) => l.status === "New").length}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Contacted
-                    </span>
-                    <span className="font-medium dark:text-gray-300">
-                      {leads.filter((l) => l.status === "Contacted").length}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Qualified
-                    </span>
-                    <span className="font-medium dark:text-gray-300">
-                      {leads.filter((l) => l.status === "Qualified").length}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <ClipboardList className="h-5 w-5 mr-2" />
-                  Deals
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-6">
-                  <div className="text-5xl font-bold mb-2 dark:text-white">
-                    {deals.length}
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Total deals in the pipeline
-                  </div>
-                </div>
-                <div className="space-y-2 mt-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Open
-                    </span>
-                    <span className="font-medium dark:text-gray-300">
-                      {deals.length -
-                        (dealsByStage["Deal Closed"]?.count || 0) -
-                        (dealsByStage["Deal Lost"]?.count || 0)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Won
-                    </span>
-                    <span className="font-medium dark:text-gray-300">
-                      {dealsByStage["Deal Closed"]?.count || 0}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Lost
-                    </span>
-                    <span className="font-medium dark:text-gray-300">
-                      {dealsByStage["Deal Lost"]?.count || 0}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Building2 className="h-5 w-5 mr-2" />
-                  Companies
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-6">
-                  <div className="text-5xl font-bold mb-2 dark:text-white">
-                    {contacts.filter((c) => c.company).length}
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Companies with contacts
-                  </div>
-                </div>
-                <div className="space-y-2 mt-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      With deals
-                    </span>
-                    <span className="font-medium dark:text-gray-300">
-                      {
-                        new Set(deals.map((d) => d.company).filter(Boolean))
-                          .size
-                      }
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Contacts
-                    </span>
-                    <span className="font-medium dark:text-gray-300">
-                      {contacts.length}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Avg. Deal Size
-                    </span>
-                    <span className="font-medium dark:text-gray-300">
-                      $
-                      {avgDealValue.toLocaleString(undefined, {
-                        maximumFractionDigits: 0,
-                      })}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
 
-        <TabsContent value="trends" className="space-y-6">
-          {/* Monthly Trends */}
+        <TabsContent value="sources" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Monthly Sales Trends</CardTitle>
+              <CardTitle>Lead Sources</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-80">
+              <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={finalMonthlyData}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      stroke="#e5e7eb"
-                      className="dark:stroke-gray-700"
-                    />
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: "#6b7280" }}
-                      className="dark:text-gray-400"
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: "#6b7280" }}
-                      className="dark:text-gray-400"
-                      tickFormatter={(value) => `$${value.toLocaleString()}`}
-                    />
-                    <Tooltip
-                      formatter={(value) => [
-                        `$${Number(value).toLocaleString()}`,
-                        "Sales",
-                      ]}
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderRadius: "0.375rem",
-                        boxShadow:
-                          "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
-                        border: "none",
-                        padding: "0.5rem",
-                      }}
-                      className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
-                    />
-                    <Line
-                      type="monotone"
+                  <PieChart>
+                    <Pie
+                      data={finalLeadSourceData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={100}
+                      fill="#8884d8"
                       dataKey="value"
-                      stroke="#4f46e5"
-                      strokeWidth={2}
-                      dot={{ r: 4, fill: "#4f46e5" }}
-                      activeDot={{ r: 6, fill: "#4f46e5" }}
+                      label={({ name, percent }) =>
+                        `${name}: ${(percent * 100).toFixed(0)}%`
+                      }
+                    >
+                      {finalLeadSourceData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip
+                      formatter={(value: any) => [value, "Leads"]}
                     />
-                  </LineChart>
+                    <Legend />
+                  </PieChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>

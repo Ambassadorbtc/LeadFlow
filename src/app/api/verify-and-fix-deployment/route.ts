@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/app/actions";
+import { createClient } from "@/supabase/client";
 
 export const dynamic = "force-dynamic";
 
@@ -172,7 +172,7 @@ export async function POST() {
       for (const table of tables) {
         const { error } = await supabase.rpc("exec_sql", {
           query: `
-            DO $
+            DO $$
             BEGIN
               IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = '${table}') THEN
                 IF NOT EXISTS (
@@ -184,7 +184,7 @@ export async function POST() {
                   EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE %I', '${table}');
                 END IF;
               END IF;
-            END $;
+            END $$;
           `,
         });
 
