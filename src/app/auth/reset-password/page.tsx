@@ -1,5 +1,1 @@
-import { redirect } from "next/navigation";
-
-export default function ResetPasswordPage() {
-  redirect("/dashboard");
-}
+export { default } from "@/app/(auth)/reset-password/page";

@@ -3,6 +3,8 @@ import "@/app/globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import Script from "next/script";
 import { TempoInit } from "@/components/tempo-init";
+import ErrorBoundary from "@/components/error-boundary";
+import NotFoundBoundary from "@/components/not-found-boundary";
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
@@ -17,7 +19,11 @@ function MyApp({ Component, pageProps }: AppProps) {
         enableSystem
         disableTransitionOnChange
       >
-        <Component {...pageProps} />
+        <ErrorBoundary>
+          <NotFoundBoundary>
+            <Component {...pageProps} />
+          </NotFoundBoundary>
+        </ErrorBoundary>
         <TempoInit />
       </ThemeProvider>
     </>

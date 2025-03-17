@@ -1,5 +1,1 @@
-export default function InviteRedirect() {
-  return null;
-}
-
-export const dynamic = "force-static";
+export { default } from "@/app/(auth)/invite/page";

@@ -21,35 +21,24 @@ serve(async (req) => {
       authToken = authHeader.substring(7);
     }
 
-    // Get Supabase URL from environment variables or headers
-    const supabaseUrl =
-      Deno.env.get("SUPABASE_URL") ||
-      (Deno.env.get("SUPABASE_PROJECT_ID")
-        ? `https://${Deno.env.get("SUPABASE_PROJECT_ID")}.supabase.co`
-        : req.headers.get("x-supabase-url"));
+    // Hard-code the Supabase URL and key from environment variables
+    let supabaseUrl = Deno.env.get("SUPABASE_PROJECT_ID")
+      ? `https://${Deno.env.get("SUPABASE_PROJECT_ID")}.supabase.co`
+      : req.headers.get("x-supabase-url") || Deno.env.get("SUPABASE_URL");
 
-    // Get Supabase key from environment variables, auth token, or headers
+    // Try to get the service key directly
     const supabaseKey =
       Deno.env.get("SUPABASE_SERVICE_KEY") ||
       authToken ||
       req.headers.get("x-supabase-key") ||
-      Deno.env.get("SUPABASE_ANON_KEY");
+      Deno.env.get("SUPABASE_ANON_KEY"); // Fallback to anon key if service key is not available
 
     if (!supabaseUrl || !supabaseKey) {
-      console.error("Missing Supabase credentials:", {
-        urlAvailable: !!supabaseUrl,
-        keyAvailable: !!supabaseKey,
-        projectIdAvailable: !!Deno.env.get("SUPABASE_PROJECT_ID"),
-        serviceKeyAvailable: !!Deno.env.get("SUPABASE_SERVICE_KEY"),
-        anonKeyAvailable: !!Deno.env.get("SUPABASE_ANON_KEY"),
-      });
-
       throw new Error(
-        "Supabase credentials not found. Please ensure SUPABASE_URL and SUPABASE_SERVICE_KEY are set.",
+        "Supabase credentials not found. Please ensure SUPABASE_PROJECT_ID and SUPABASE_SERVICE_KEY are set.",
       );
     }
 
-    console.log("Creating Supabase client with URL:", supabaseUrl);
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
     // Execute SQL to add missing columns
@@ -109,11 +98,15 @@ serve(async (req) => {
             END IF;
             
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'leads' AND column_name = 'bf_interest') THEN
-                ALTER TABLE public.leads ADD COLUMN bf_interest TEXT;
+                ALTER TABLE public.leads ADD COLUMN bf_interest BOOLEAN;
+            END IF;
+            
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'leads' AND column_name = 'ct_interest') THEN
+                ALTER TABLE public.leads ADD COLUMN ct_interest BOOLEAN;
             END IF;
             
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'leads' AND column_name = 'ba_interest') THEN
-                ALTER TABLE public.leads ADD COLUMN ba_interest TEXT;
+                ALTER TABLE public.leads ADD COLUMN ba_interest BOOLEAN;
             END IF;
             
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'leads' AND column_name = 'notes') THEN
@@ -122,26 +115,36 @@ serve(async (req) => {
             
             -- Add missing columns to deals table
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'deals' AND column_name = 'deal_value') THEN
-                ALTER TABLE public.deals ADD COLUMN deal_value NUMERIC;
-            END IF;
-            
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'deals' AND column_name = 'bf_interest') THEN
-                ALTER TABLE public.deals ADD COLUMN bf_interest TEXT;
-            END IF;
-            
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'deals' AND column_name = 'ba_interest') THEN
-                ALTER TABLE public.deals ADD COLUMN ba_interest TEXT;
+                ALTER TABLE public.deals ADD COLUMN value NUMERIC;
             END IF;
             
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'deals' AND column_name = 'deal_type') THEN
                 ALTER TABLE public.deals ADD COLUMN deal_type TEXT;
             END IF;
+            
+            -- Add missing columns to user_settings table
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_settings' AND column_name = 'lead_notifications') THEN
+                ALTER TABLE public.user_settings ADD COLUMN lead_notifications BOOLEAN DEFAULT true;
+            END IF;
         END $$;
+        
+        -- Create email_logs table if it doesn't exist
+        CREATE TABLE IF NOT EXISTS public.email_logs (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+          email TEXT NOT NULL,
+          subject TEXT NOT NULL,
+          message TEXT NOT NULL,
+          status TEXT NOT NULL,
+          notification_type TEXT,
+          metadata JSONB,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+        );
         
         -- Add tables to realtime publication
         DO $$
         DECLARE
-          tables TEXT[] := ARRAY['users', 'leads', 'deals', 'contacts', 'companies', 'notifications', 'user_settings', 'system_settings', 'email_logs', 'import_history'];
+          tables TEXT[] := ARRAY['users', 'leads', 'deals', 'contacts', 'companies', 'notifications', 'user_settings', 'system_settings', 'email_logs'];
           t TEXT;
         BEGIN
           FOREACH t IN ARRAY tables
@@ -169,7 +172,6 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
-    console.error("Error in add_missing_columns:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,

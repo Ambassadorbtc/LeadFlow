@@ -25,8 +25,6 @@ const nextConfig = {
       tls: false,
       crypto: false,
     };
-    // Disable webpack caching in development to prevent ENOENT errors
-    config.cache = false;
     return config;
   },
 };

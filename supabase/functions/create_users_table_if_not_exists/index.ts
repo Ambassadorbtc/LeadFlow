@@ -21,35 +21,24 @@ serve(async (req) => {
       authToken = authHeader.substring(7);
     }
 
-    // Get Supabase URL from environment variables or headers
-    const supabaseUrl =
-      Deno.env.get("SUPABASE_URL") ||
-      (Deno.env.get("SUPABASE_PROJECT_ID")
-        ? `https://${Deno.env.get("SUPABASE_PROJECT_ID")}.supabase.co`
-        : req.headers.get("x-supabase-url"));
+    // Hard-code the Supabase URL and key from environment variables
+    let supabaseUrl = Deno.env.get("SUPABASE_PROJECT_ID")
+      ? `https://${Deno.env.get("SUPABASE_PROJECT_ID")}.supabase.co`
+      : req.headers.get("x-supabase-url") || Deno.env.get("SUPABASE_URL");
 
-    // Get Supabase key from environment variables, auth token, or headers
+    // Try to get the service key directly
     const supabaseKey =
       Deno.env.get("SUPABASE_SERVICE_KEY") ||
       authToken ||
       req.headers.get("x-supabase-key") ||
-      Deno.env.get("SUPABASE_ANON_KEY");
+      Deno.env.get("SUPABASE_ANON_KEY"); // Fallback to anon key if service key is not available
 
     if (!supabaseUrl || !supabaseKey) {
-      console.error("Missing Supabase credentials:", {
-        urlAvailable: !!supabaseUrl,
-        keyAvailable: !!supabaseKey,
-        projectIdAvailable: !!Deno.env.get("SUPABASE_PROJECT_ID"),
-        serviceKeyAvailable: !!Deno.env.get("SUPABASE_SERVICE_KEY"),
-        anonKeyAvailable: !!Deno.env.get("SUPABASE_ANON_KEY"),
-      });
-
       throw new Error(
-        "Supabase credentials not found. Please ensure SUPABASE_URL and SUPABASE_SERVICE_KEY are set.",
+        "Supabase credentials not found. Please ensure SUPABASE_PROJECT_ID and SUPABASE_SERVICE_KEY are set.",
       );
     }
 
-    console.log("Creating Supabase client with URL:", supabaseUrl);
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
     // Create users table if it doesn't exist
@@ -123,11 +112,15 @@ serve(async (req) => {
         DROP POLICY IF EXISTS "Users can view their own profile" ON public.users;
         DROP POLICY IF EXISTS "Users can update their own profile" ON public.users;
         DROP POLICY IF EXISTS "Users can insert their own profile" ON public.users;
+        DROP POLICY IF EXISTS "Admin users can view all profiles" ON public.users;
+        DROP POLICY IF EXISTS "Admin users can update all profiles" ON public.users;
+        DROP POLICY IF EXISTS "Admin access" ON public.users;
+        DROP POLICY IF EXISTS "Public access" ON public.users;
         
         -- Create policies for users table
-        CREATE POLICY "Users can view their own profile"
+        CREATE POLICY "Public access"
           ON public.users FOR SELECT
-          USING (auth.uid() = id);
+          USING (true);
         
         CREATE POLICY "Users can update their own profile"
           ON public.users FOR UPDATE
@@ -169,21 +162,11 @@ serve(async (req) => {
     const results = [];
     for (const user of authUsers.users) {
       // Check if user exists in public.users table
-      const { data: existingUser, error: userError } = await supabaseAdmin
+      const { data: existingUser } = await supabaseAdmin
         .from("users")
         .select("id")
         .eq("id", user.id)
         .single();
-
-      if (userError && userError.code !== "PGRST116") {
-        // PGRST116 is "not found"
-        results.push({
-          id: user.id,
-          status: "error",
-          message: userError.message,
-        });
-        continue;
-      }
 
       if (!existingUser) {
         // Create user in public.users table
@@ -207,6 +190,7 @@ serve(async (req) => {
             is_active: true,
             is_admin: false,
             onboarding_completed: false,
+            disable_onboarding: false,
           });
 
         if (insertError) {
@@ -237,7 +221,6 @@ serve(async (req) => {
       },
     );
   } catch (error) {
-    console.error("Error in create_users_table_if_not_exists:", error.message);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       {

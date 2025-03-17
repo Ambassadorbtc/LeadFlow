@@ -1,5 +1,1 @@
-export default function ResetPasswordRedirect() {
-  return null;
-}
-
-export const dynamic = "force-static";
+export { default } from "@/app/(auth)/reset-password/page";

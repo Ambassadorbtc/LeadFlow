@@ -1,5 +1,1 @@
-import { redirect } from "next/navigation";
-
-export default function InvitePage() {
-  redirect("/dashboard");
-}
+export { default } from "@/app/(auth)/invite/page";

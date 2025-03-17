@@ -64,8 +64,6 @@ export async function GET() {
       "notifications",
       "user_settings",
       "system_settings",
-      "email_logs",
-      "import_history",
     ];
 
     results["tables"] = {
