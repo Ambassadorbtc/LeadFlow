@@ -15,7 +15,6 @@ serve(async (req) => {
 
   try {
     // Create a Supabase client with the Admin key
-    // Extract credentials from Authorization header if present
     let authToken = "";
     const authHeader = req.headers.get("Authorization") || "";
     if (authHeader && authHeader.startsWith("Bearer ")) {

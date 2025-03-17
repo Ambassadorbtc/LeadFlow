@@ -110,7 +110,7 @@ export async function POST() {
           CREATE TABLE IF NOT EXISTS public.email_logs (
             id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
             user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-            recipient_email TEXT NOT NULL,
+            email TEXT NOT NULL,
             subject TEXT NOT NULL,
             message TEXT NOT NULL,
             status TEXT NOT NULL,
