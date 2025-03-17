@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { GripVertical } from "lucide-react";
 
 interface ResizableTableProps {
   children: React.ReactNode;
@@ -31,7 +32,8 @@ export function ResizableTable({ children, className }: ResizableTableProps) {
           <path d="M16 12h-2" />
           <path d="M22 12h-2" />
         </svg>
-        Hover over column edges and drag to resize
+        Hover over column edges and drag to resize. Drag column headers to
+        reorder.
       </div>
       <table className="w-full divide-y divide-[#f3f4f6] text-sm">
         {children}
@@ -48,24 +50,30 @@ interface ResizableHeaderProps {
   onClick?: () => void;
   initialWidth?: number;
   allowOverlap?: boolean;
+  index?: number;
+  onReorder?: (dragIndex: number, dropIndex: number) => void;
 }
 
 export function ResizableHeader({
   children,
   className,
-  minWidth = 30,
+  minWidth = 0,
   defaultWidth,
   initialWidth,
   onClick,
-  allowOverlap = false,
+  allowOverlap = true, // Set default to true to allow overlap
+  index,
+  onReorder,
 }: ResizableHeaderProps) {
   const [width, setWidth] = useState<number | undefined>(
     initialWidth || defaultWidth,
   );
   const [resizing, setResizing] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const startX = useRef<number>(0);
   const startWidth = useRef<number>(0);
   const headerRef = useRef<HTMLTableCellElement>(null);
+  const dragIndex = useRef<number | null>(null);
 
   useEffect(() => {
     if (initialWidth) {
@@ -75,6 +83,7 @@ export function ResizableHeader({
     }
   }, [initialWidth, width]);
 
+  // Resize functionality
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -89,37 +98,99 @@ export function ResizableHeader({
     document.addEventListener("mouseup", handleMouseUp, { capture: true });
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (resizing) {
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (resizing) {
+        e.preventDefault();
+        e.stopPropagation();
+        const diffX = e.clientX - startX.current;
+        let newWidth = startWidth.current + diffX;
+
+        // Allow full resizing with no minimum width
+        newWidth = Math.max(0, newWidth);
+
+        setWidth(newWidth);
+
+        if (headerRef.current) {
+          headerRef.current.style.width = `${newWidth}px`;
+        }
+      }
+    },
+    [resizing],
+  );
+
+  const handleMouseUp = useCallback(
+    (e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      const diffX = e.clientX - startX.current;
-      let newWidth;
+      setResizing(false);
+      document.removeEventListener("mousemove", handleMouseMove, {
+        capture: true,
+      });
+      document.removeEventListener("mouseup", handleMouseUp, { capture: true });
+    },
+    [handleMouseMove],
+  );
 
-      if (allowOverlap) {
-        // When overlap is allowed, don't enforce minimum width
-        newWidth = startWidth.current + diffX;
-      } else {
-        // When overlap is not allowed, enforce minimum width
-        newWidth = Math.max(minWidth, startWidth.current + diffX);
-      }
+  // Drag and drop functionality for column reordering
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    if (typeof index === "number" && onReorder) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", index.toString());
+      dragIndex.current = index;
+      setDragging(true);
 
-      setWidth(newWidth);
+      // Add a delay to set opacity to avoid flickering
+      setTimeout(() => {
+        if (headerRef.current) {
+          headerRef.current.style.opacity = "0.5";
+        }
+      }, 0);
+    }
+  };
 
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (typeof index === "number" && onReorder) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    }
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    if (typeof index === "number" && onReorder) {
+      e.preventDefault();
       if (headerRef.current) {
-        headerRef.current.style.width = `${newWidth}px`;
+        headerRef.current.classList.add("bg-blue-50", "dark:bg-blue-900/20");
       }
     }
   };
 
-  const handleMouseUp = (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setResizing(false);
-    document.removeEventListener("mousemove", handleMouseMove, {
-      capture: true,
-    });
-    document.removeEventListener("mouseup", handleMouseUp, { capture: true });
+  const handleDragLeave = () => {
+    if (headerRef.current) {
+      headerRef.current.classList.remove("bg-blue-50", "dark:bg-blue-900/20");
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    if (typeof index === "number" && onReorder && dragIndex.current !== null) {
+      e.preventDefault();
+      const sourceIndex = parseInt(e.dataTransfer.getData("text/plain"), 10);
+      if (sourceIndex !== index) {
+        onReorder(sourceIndex, index);
+      }
+      if (headerRef.current) {
+        headerRef.current.classList.remove("bg-blue-50", "dark:bg-blue-900/20");
+      }
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDragging(false);
+    if (headerRef.current) {
+      headerRef.current.style.opacity = "1";
+      headerRef.current.classList.remove("bg-blue-50", "dark:bg-blue-900/20");
+    }
+    dragIndex.current = null;
   };
 
   return (
@@ -128,16 +199,33 @@ export function ResizableHeader({
       className={cn(
         "relative px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider group",
         className,
+        dragging && "opacity-50",
       )}
       style={{
         width: width ? `${width}px` : undefined,
-        minWidth: allowOverlap ? 0 : `${minWidth}px`,
+        minWidth: 0,
+        maxWidth: "none",
         position: "relative",
         zIndex: resizing ? 10 : "auto",
+        cursor: typeof index === "number" && onReorder ? "grab" : undefined,
       }}
       onClick={onClick}
     >
-      <div className="flex items-center">{children}</div>
+      <div
+        className="flex items-center"
+        draggable={typeof index === "number" && onReorder}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onDragEnd={handleDragEnd}
+      >
+        {typeof index === "number" && onReorder && (
+          <GripVertical className="h-3 w-3 mr-1 text-gray-400 cursor-grab" />
+        )}
+        {children}
+      </div>
       <div
         className={cn(
           "absolute top-0 right-0 h-full w-4 cursor-col-resize opacity-0 group-hover:opacity-100 hover:bg-blue-500 hover:opacity-100 transition-opacity",

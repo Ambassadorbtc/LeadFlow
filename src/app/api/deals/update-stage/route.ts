@@ -59,30 +59,27 @@ export async function POST(request: NextRequest) {
 
     // Create notification for stage change
     try {
-      await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/notifications/create`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId: user.id,
-            title: "Deal Stage Updated",
-            message: `${currentDeal.name} has moved to ${newStage} stage`,
-            type: "deal",
-            relatedId: dealId,
-            relatedType: "deal",
-            metadata: {
-              dealId: dealId,
-              dealName: currentDeal.name,
-              previousStage: currentDeal.stage,
-              newStage: newStage,
-              value: currentDeal.value,
-            },
-          }),
+      const notificationResponse = await fetch(`/api/notifications/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          userId: user.id,
+          title: "Deal Stage Updated",
+          message: `${currentDeal.name} has moved to ${newStage} stage`,
+          type: "deal",
+          relatedId: dealId,
+          relatedType: "deal",
+          metadata: {
+            dealId: dealId,
+            dealName: currentDeal.name,
+            previousStage: currentDeal.stage,
+            newStage: newStage,
+            value: currentDeal.value,
+          },
+        }),
+      });
 
       // Send email notification if user has email notifications enabled
       const { data: userSettings } = await supabase
@@ -92,27 +89,24 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (userSettings?.email_notifications && userSettings?.deal_updates) {
-        await fetch(
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/email-notifications/send`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              userId: user.id,
-              subject: `Deal Stage Updated: ${currentDeal.name}`,
-              message: `Your deal ${currentDeal.name} has been moved from ${currentDeal.stage} to ${newStage} stage.`,
-              notificationType: "deal",
-              metadata: {
-                dealId: dealId,
-                dealName: currentDeal.name,
-                previousStage: currentDeal.stage,
-                newStage: newStage,
-              },
-            }),
+        await fetch(`/api/email-notifications/send`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          body: JSON.stringify({
+            userId: user.id,
+            subject: `Deal Stage Updated: ${currentDeal.name}`,
+            message: `Your deal ${currentDeal.name} has been moved from ${currentDeal.stage} to ${newStage} stage.`,
+            notificationType: "deal",
+            metadata: {
+              dealId: dealId,
+              dealName: currentDeal.name,
+              previousStage: currentDeal.stage,
+              newStage: newStage,
+            },
+          }),
+        });
       }
     } catch (notificationError) {
       console.error("Error creating notification:", notificationError);

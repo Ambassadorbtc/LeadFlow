@@ -36,30 +36,27 @@ export default function EditDealClientForm({ deal }: { deal: any }) {
       // Create notification if deal stage has changed
       if (data.stage && data.stage !== deal.stage) {
         try {
-          await fetch(
-            `${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/notifications/create`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                userId: user.id,
-                title: "Deal Stage Updated",
-                message: `${deal.name} has moved to ${data.stage} stage`,
-                type: "deal",
-                relatedId: deal.id,
-                relatedType: "deal",
-                metadata: {
-                  dealId: deal.id,
-                  dealName: deal.name,
-                  previousStage: deal.stage,
-                  newStage: data.stage,
-                  value: deal.value,
-                },
-              }),
+          const response = await fetch(`/api/notifications/create`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
             },
-          );
+            body: JSON.stringify({
+              userId: user.id,
+              title: "Deal Stage Updated",
+              message: `${deal.name} has moved to ${data.stage} stage`,
+              type: "deal",
+              relatedId: deal.id,
+              relatedType: "deal",
+              metadata: {
+                dealId: deal.id,
+                dealName: deal.name,
+                previousStage: deal.stage,
+                newStage: data.stage,
+                value: deal.value,
+              },
+            }),
+          });
 
           // Send email notification if user has email notifications enabled
           const { data: userSettings } = await supabase

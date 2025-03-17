@@ -67,29 +67,26 @@ export async function POST(request: NextRequest) {
 
     // Create notification
     try {
-      await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/notifications/create`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId: user.id,
-            title,
-            message,
-            type: "contact",
-            relatedId: contactId,
-            relatedType: "contact",
-            metadata: {
-              contactId,
-              contactName: contact.name,
-              action,
-              details,
-            },
-          }),
+      const notificationResponse = await fetch(`/api/notifications/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          userId: user.id,
+          title,
+          message,
+          type: "contact",
+          relatedId: contactId,
+          relatedType: "contact",
+          metadata: {
+            contactId,
+            contactName: contact.name,
+            action,
+            details,
+          },
+        }),
+      });
 
       // Send email notification if user has email notifications enabled
       const { data: userSettings } = await supabase
@@ -99,26 +96,23 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (userSettings?.email_notifications && userSettings?.contact_updates) {
-        await fetch(
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/email-notifications/send`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              userId: user.id,
-              subject: title,
-              message,
-              notificationType: "contact",
-              metadata: {
-                contactId,
-                contactName: contact.name,
-                action,
-              },
-            }),
+        await fetch(`/api/email-notifications/send`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          body: JSON.stringify({
+            userId: user.id,
+            subject: title,
+            message,
+            notificationType: "contact",
+            metadata: {
+              contactId,
+              contactName: contact.name,
+              action,
+            },
+          }),
+        });
       }
     } catch (notificationError) {
       console.error("Error creating notification:", notificationError);

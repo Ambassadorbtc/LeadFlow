@@ -74,28 +74,25 @@ export async function POST(request: NextRequest) {
 
       // Create notification for lead conversion to deal
       try {
-        await fetch(
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/notifications/create`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              userId: user.id,
-              title: "Lead Converted to Deal",
-              message: `${lead.business_name} has been converted to a deal`,
-              type: "deal",
-              relatedId: lead.id,
-              relatedType: "lead",
-              metadata: {
-                leadId: lead.id,
-                businessName: lead.business_name,
-                dealValue: lead.deal_value || 0,
-              },
-            }),
+        const notificationResponse = await fetch(`/api/notifications/create`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          body: JSON.stringify({
+            userId: user.id,
+            title: "Lead Converted to Deal",
+            message: `${lead.business_name} has been converted to a deal`,
+            type: "deal",
+            relatedId: lead.id,
+            relatedType: "lead",
+            metadata: {
+              leadId: lead.id,
+              businessName: lead.business_name,
+              dealValue: lead.deal_value || 0,
+            },
+          }),
+        });
 
         // Send email notification if user has email notifications enabled
         const { data: userSettings } = await supabase

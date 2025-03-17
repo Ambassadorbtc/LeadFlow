@@ -535,7 +535,7 @@ export default function LeadsClientPage({
               <tr>
                 <th
                   scope="col"
-                  className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider"
+                  className="px-2 py-1 text-left text-xs font-medium text-[#6b7280] dark:text-gray-300 uppercase tracking-wider relative"
                 >
                   <div className="flex items-center">
                     <input
@@ -548,11 +548,11 @@ export default function LeadsClientPage({
                       onChange={(e) => handleSelectAll(e.target.checked)}
                     />
                   </div>
-                  <div className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-blue-500 hover:opacity-100 transition-opacity" />
                 </th>
                 <ResizableHeader
                   className="hidden md:table-cell cursor-pointer group"
                   onClick={() => handleSortChange("prospect_id")}
+                  minWidth={100}
                 >
                   Prospect ID
                   {sortField === "prospect_id" && (
@@ -562,6 +562,7 @@ export default function LeadsClientPage({
                 <ResizableHeader
                   className="cursor-pointer group"
                   onClick={() => handleSortChange("business_name")}
+                  minWidth={120}
                 >
                   Business
                   {sortField === "business_name" && (
@@ -571,6 +572,7 @@ export default function LeadsClientPage({
                 <ResizableHeader
                   className="cursor-pointer group"
                   onClick={() => handleSortChange("contact_name")}
+                  minWidth={120}
                 >
                   Contact
                   {sortField === "contact_name" && (
@@ -580,18 +582,23 @@ export default function LeadsClientPage({
                 <ResizableHeader
                   className="hidden lg:table-cell cursor-pointer group"
                   onClick={() => handleSortChange("contact_email")}
+                  minWidth={150}
                 >
                   Email
                   {sortField === "contact_email" && (
                     <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
                   )}
                 </ResizableHeader>
-                <ResizableHeader className="hidden lg:table-cell">
+                <ResizableHeader
+                  className="hidden lg:table-cell"
+                  minWidth={120}
+                >
                   Phone
                 </ResizableHeader>
                 <ResizableHeader
                   className="cursor-pointer group"
                   onClick={() => handleSortChange("status")}
+                  minWidth={100}
                 >
                   Status
                   {sortField === "status" && (
@@ -601,6 +608,7 @@ export default function LeadsClientPage({
                 <ResizableHeader
                   className="hidden md:table-cell cursor-pointer group"
                   onClick={() => handleSortChange("owner")}
+                  minWidth={100}
                 >
                   Owner
                   {sortField === "owner" && (
@@ -610,6 +618,7 @@ export default function LeadsClientPage({
                 <ResizableHeader
                   className="cursor-pointer group"
                   onClick={() => handleSortChange("deal_value")}
+                  minWidth={100}
                 >
                   Deal Value
                   {sortField === "deal_value" && (
@@ -619,13 +628,17 @@ export default function LeadsClientPage({
                 <ResizableHeader
                   className="hidden md:table-cell cursor-pointer group"
                   onClick={() => handleSortChange("created_at")}
+                  minWidth={100}
                 >
                   Created
                   {sortField === "created_at" && (
                     <ArrowUpDown className="h-3 w-3 ml-1 text-blue-600" />
                   )}
                 </ResizableHeader>
-                <ResizableHeader className="whitespace-nowrap sm:table-cell">
+                <ResizableHeader
+                  className="whitespace-nowrap sm:table-cell"
+                  minWidth={250}
+                >
                   Comment
                 </ResizableHeader>
                 <th

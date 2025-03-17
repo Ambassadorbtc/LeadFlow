@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const { userId, subject, message, notificationType, metadata } =
       await request.json();
@@ -63,6 +63,24 @@ export async function POST(request: NextRequest) {
         success: false,
         message: `User has disabled ${notificationType} notifications`,
       });
+    }
+
+    // Log the email in the database
+    const { data: logData, error: logError } = await supabase
+      .from("email_logs")
+      .insert({
+        user_id: userId,
+        recipient_email: userData.email,
+        subject,
+        message,
+        notification_type: notificationType,
+        metadata,
+        status: "sent",
+      });
+
+    if (logError) {
+      console.error("Error logging email:", logError);
+      // Continue with the email send even if logging fails
     }
 
     // In a production environment, you would integrate with an email service here

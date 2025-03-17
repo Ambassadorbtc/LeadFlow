@@ -165,6 +165,50 @@ export type Database = {
           },
         ]
       }
+      email_logs: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          message: string
+          metadata: Json | null
+          notification_type: string | null
+          status: string
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          message: string
+          metadata?: Json | null
+          notification_type?: string | null
+          status: string
+          subject: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          message?: string
+          metadata?: Json | null
+          notification_type?: string | null
+          status?: string
+          subject?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_history: {
         Row: {
           created_at: string | null
@@ -608,9 +652,9 @@ export type Database = {
     Functions: {
       exec_sql: {
         Args: {
-          sql_query: string
+          query: string
         }
-        Returns: Json
+        Returns: Record<string, unknown>[]
       }
       fix_duplicate_users: {
         Args: Record<PropertyKey, never>

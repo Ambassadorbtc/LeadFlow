@@ -17,6 +17,7 @@ export async function GET() {
       "notifications",
       "user_settings",
       "system_settings",
+      "email_logs",
     ];
 
     const results = {};

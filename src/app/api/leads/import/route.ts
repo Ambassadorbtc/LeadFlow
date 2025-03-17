@@ -132,28 +132,25 @@ export async function POST(request: NextRequest) {
 
     // Create notification for lead import
     try {
-      const notificationResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/notifications/create`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId: user.id,
-            title: "Leads Imported",
-            message: `Successfully imported ${leads.length} leads from ${csvFile.name}`,
-            type: "lead",
-            relatedId: importRecord.id,
-            relatedType: "import",
-            metadata: {
-              importId: importRecord.id,
-              leadCount: leads.length,
-              fileName: csvFile.name,
-            },
-          }),
+      const notificationResponse = await fetch(`/api/notifications/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          userId: user.id,
+          title: "Leads Imported",
+          message: `Successfully imported ${leads.length} leads from ${csvFile.name}`,
+          type: "lead",
+          relatedId: importRecord.id,
+          relatedType: "import",
+          metadata: {
+            importId: importRecord.id,
+            leadCount: leads.length,
+            fileName: csvFile.name,
+          },
+        }),
+      });
 
       if (!notificationResponse.ok) {
         console.error("Failed to create notification for lead import");
