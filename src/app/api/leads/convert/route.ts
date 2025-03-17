@@ -71,6 +71,52 @@ export async function POST(request: NextRequest) {
       if (dealError) {
         throw new Error(dealError.message);
       }
+
+      // Create notification for lead conversion to deal
+      try {
+        await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/notifications/create`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              userId: user.id,
+              title: "Lead Converted to Deal",
+              message: `${lead.business_name} has been converted to a deal`,
+              type: "deal",
+              relatedId: lead.id,
+              relatedType: "lead",
+              metadata: {
+                leadId: lead.id,
+                businessName: lead.business_name,
+                dealValue: lead.deal_value || 0,
+              },
+            }),
+          },
+        );
+
+        // Send email notification if user has email notifications enabled
+        const { data: userSettings } = await supabase
+          .from("user_settings")
+          .select("email_notifications, deal_notifications")
+          .eq("user_id", user.id)
+          .single();
+
+        if (
+          userSettings?.email_notifications &&
+          userSettings?.deal_notifications
+        ) {
+          // In a production environment, you would integrate with an email service here
+          console.log(
+            `Would send email notification to user ${user.id} about lead conversion`,
+          );
+        }
+      } catch (notificationError) {
+        console.error("Error creating notification:", notificationError);
+        // Continue with the response even if notification fails
+      }
     }
 
     // Use absolute URL with the original request's host

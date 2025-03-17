@@ -1,7 +1,5 @@
 import { createClient } from "@/app/actions";
 import { redirect } from "next/navigation";
-import DashboardNavbar from "@/components/dashboard-navbar";
-import Sidebar from "@/components/dashboard/sidebar";
 import NotificationsClient from "./notifications-client";
 
 export default async function NotificationsPage() {
@@ -23,17 +21,8 @@ export default async function NotificationsPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardNavbar />
-        <main className="flex-1 overflow-auto">
-          <NotificationsClient
-            user={user}
-            notifications={notifications || []}
-          />
-        </main>
-      </div>
+    <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-auto">
+      <NotificationsClient user={user} notifications={notifications || []} />
     </div>
   );
 }

@@ -33,6 +33,53 @@ export default function EditDealClientForm({ deal }: { deal: any }) {
         return false;
       }
 
+      // Create notification if deal stage has changed
+      if (data.stage && data.stage !== deal.stage) {
+        try {
+          await fetch(
+            `${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/notifications/create`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                userId: user.id,
+                title: "Deal Stage Updated",
+                message: `${deal.name} has moved to ${data.stage} stage`,
+                type: "deal",
+                relatedId: deal.id,
+                relatedType: "deal",
+                metadata: {
+                  dealId: deal.id,
+                  dealName: deal.name,
+                  previousStage: deal.stage,
+                  newStage: data.stage,
+                  value: deal.value,
+                },
+              }),
+            },
+          );
+
+          // Send email notification if user has email notifications enabled
+          const { data: userSettings } = await supabase
+            .from("user_settings")
+            .select("email_notifications, deal_updates")
+            .eq("user_id", user.id)
+            .single();
+
+          if (userSettings?.email_notifications && userSettings?.deal_updates) {
+            // In a production environment, you would integrate with an email service here
+            console.log(
+              `Would send email notification to user ${user.id} about deal stage change`,
+            );
+          }
+        } catch (notificationError) {
+          console.error("Error creating notification:", notificationError);
+          // Continue with the response even if notification fails
+        }
+      }
+
       router.push(`/dashboard/deals/${deal.id}`);
       return true;
     } catch (error) {

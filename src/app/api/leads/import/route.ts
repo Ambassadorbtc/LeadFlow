@@ -130,6 +130,56 @@ export async function POST(request: NextRequest) {
       })
       .eq("id", importRecord.id);
 
+    // Create notification for lead import
+    try {
+      const notificationResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/api/notifications/create`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            title: "Leads Imported",
+            message: `Successfully imported ${leads.length} leads from ${csvFile.name}`,
+            type: "lead",
+            relatedId: importRecord.id,
+            relatedType: "import",
+            metadata: {
+              importId: importRecord.id,
+              leadCount: leads.length,
+              fileName: csvFile.name,
+            },
+          }),
+        },
+      );
+
+      if (!notificationResponse.ok) {
+        console.error("Failed to create notification for lead import");
+      }
+
+      // Send email notification if user has email notifications enabled
+      const { data: userSettings } = await supabase
+        .from("user_settings")
+        .select("email_notifications, lead_notifications")
+        .eq("user_id", user.id)
+        .single();
+
+      if (
+        userSettings?.email_notifications &&
+        userSettings?.lead_notifications
+      ) {
+        // In a production environment, you would integrate with an email service here
+        console.log(
+          `Would send email notification to user ${user.id} about lead import`,
+        );
+      }
+    } catch (notificationError) {
+      console.error("Error creating notification:", notificationError);
+      // Continue with the response even if notification fails
+    }
+
     return NextResponse.json({
       success: true,
       message: `Successfully imported ${leads.length} leads`,

@@ -33,31 +33,41 @@ export const createClient = async () => {
 export const signUpAction = async (formData: FormData) => {
   const email = formData.get("email")?.toString();
   const password = formData.get("password")?.toString();
+  const confirmPassword = formData.get("confirmPassword")?.toString();
   const fullName = formData.get("full_name")?.toString() || "";
+  const inviteToken = formData.get("inviteToken")?.toString();
   const supabase = await createClient();
   const origin = headers().get("origin");
+  const isInvite = !!inviteToken;
+  const redirectPath = isInvite ? "/invite" : "/sign-up";
 
   if (!email || !password) {
     return encodedRedirect(
       "error",
-      "/sign-up",
+      redirectPath,
       "Email and password are required",
     );
   }
 
-  // Check if user already exists
-  const { data: existingUser } = await supabase
-    .from("users")
-    .select("*")
-    .eq("email", email)
-    .single();
+  if (confirmPassword && password !== confirmPassword) {
+    return encodedRedirect("error", redirectPath, "Passwords do not match");
+  }
 
-  if (existingUser) {
-    return encodedRedirect(
-      "error",
-      "/sign-up",
-      "An account with this email already exists",
-    );
+  // Check if user already exists (skip for invite flow)
+  if (!isInvite) {
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .single();
+
+    if (existingUser) {
+      return encodedRedirect(
+        "error",
+        redirectPath,
+        "An account with this email already exists",
+      );
+    }
   }
 
   const {
@@ -71,6 +81,7 @@ export const signUpAction = async (formData: FormData) => {
       data: {
         full_name: fullName,
         email: email,
+        invite_token: inviteToken,
       },
     },
   });
@@ -79,7 +90,7 @@ export const signUpAction = async (formData: FormData) => {
 
   if (error) {
     console.error(error.code + " " + error.message);
-    return encodedRedirect("error", "/sign-up", error.message);
+    return encodedRedirect("error", redirectPath, error.message);
   }
 
   if (user) {
@@ -96,6 +107,7 @@ export const signUpAction = async (formData: FormData) => {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           is_active: true,
+          onboarding_completed: isInvite ? true : false, // Skip onboarding for invited users
         },
         { onConflict: "id", ignoreDuplicates: false },
       );
@@ -108,11 +120,11 @@ export const signUpAction = async (formData: FormData) => {
     }
   }
 
-  return encodedRedirect(
-    "success",
-    "/sign-up",
-    "Thanks for signing up! Please check your email for a verification link.",
-  );
+  const successMessage = isInvite
+    ? "Your account has been created. Please check your email for a verification link."
+    : "Thanks for signing up! Please check your email for a verification link.";
+
+  return encodedRedirect("success", redirectPath, successMessage);
 };
 
 export const signInAction = async (formData: FormData) => {
@@ -243,7 +255,7 @@ export const resetPasswordAction = async (formData: FormData) => {
   if (!password || !confirmPassword) {
     return encodedRedirect(
       "error",
-      "/protected/reset-password",
+      "/reset-password",
       "Password and confirm password are required",
     );
   }
@@ -251,7 +263,7 @@ export const resetPasswordAction = async (formData: FormData) => {
   if (password !== confirmPassword) {
     return encodedRedirect(
       "error",
-      "/dashboard/reset-password",
+      "/reset-password",
       "Passwords do not match",
     );
   }
@@ -263,15 +275,15 @@ export const resetPasswordAction = async (formData: FormData) => {
   if (error) {
     return encodedRedirect(
       "error",
-      "/dashboard/reset-password",
+      "/reset-password",
       "Password update failed",
     );
   }
 
   return encodedRedirect(
     "success",
-    "/protected/reset-password",
-    "Password updated",
+    "/sign-in",
+    "Password updated successfully. Please sign in with your new password.",
   );
 };
 
