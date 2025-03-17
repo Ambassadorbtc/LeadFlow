@@ -16,6 +16,19 @@ const nextConfig = {
   },
   // Properly handle error pages in a hybrid setup
   pageExtensions: ["tsx", "ts", "jsx", "js"],
+  webpack: (config) => {
+    // Fix webpack errors related to missing polyfills
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+      crypto: false,
+    };
+    // Disable webpack caching in development to prevent ENOENT errors
+    config.cache = false;
+    return config;
+  },
 };
 
 if (process.env.NEXT_PUBLIC_TEMPO) {

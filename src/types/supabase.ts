@@ -586,6 +586,7 @@ export type Database = {
           company: string | null
           created_at: string
           credits: string | null
+          disable_onboarding: boolean | null
           email: string | null
           full_name: string | null
           id: string
@@ -595,9 +596,10 @@ export type Database = {
           is_blocked: boolean | null
           job_title: string | null
           name: string | null
+          onboarding_completed: boolean | null
           phone: string | null
           subscription: string | null
-          token_identifier: string
+          token_identifier: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -607,6 +609,7 @@ export type Database = {
           company?: string | null
           created_at?: string
           credits?: string | null
+          disable_onboarding?: boolean | null
           email?: string | null
           full_name?: string | null
           id: string
@@ -616,9 +619,10 @@ export type Database = {
           is_blocked?: boolean | null
           job_title?: string | null
           name?: string | null
+          onboarding_completed?: boolean | null
           phone?: string | null
           subscription?: string | null
-          token_identifier: string
+          token_identifier?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -628,6 +632,7 @@ export type Database = {
           company?: string | null
           created_at?: string
           credits?: string | null
+          disable_onboarding?: boolean | null
           email?: string | null
           full_name?: string | null
           id?: string
@@ -637,9 +642,10 @@ export type Database = {
           is_blocked?: boolean | null
           job_title?: string | null
           name?: string | null
+          onboarding_completed?: boolean | null
           phone?: string | null
           subscription?: string | null
-          token_identifier?: string
+          token_identifier?: string | null
           updated_at?: string | null
           user_id?: string | null
         }

@@ -21,24 +21,35 @@ serve(async (req) => {
       authToken = authHeader.substring(7);
     }
 
-    // Hard-code the Supabase URL and key from environment variables
-    let supabaseUrl = Deno.env.get("SUPABASE_PROJECT_ID")
-      ? `https://${Deno.env.get("SUPABASE_PROJECT_ID")}.supabase.co`
-      : req.headers.get("x-supabase-url") || Deno.env.get("SUPABASE_URL");
+    // Get Supabase URL from environment variables or headers
+    const supabaseUrl =
+      Deno.env.get("SUPABASE_URL") ||
+      (Deno.env.get("SUPABASE_PROJECT_ID")
+        ? `https://${Deno.env.get("SUPABASE_PROJECT_ID")}.supabase.co`
+        : req.headers.get("x-supabase-url"));
 
-    // Try to get the service key directly
+    // Get Supabase key from environment variables, auth token, or headers
     const supabaseKey =
       Deno.env.get("SUPABASE_SERVICE_KEY") ||
       authToken ||
       req.headers.get("x-supabase-key") ||
-      Deno.env.get("SUPABASE_ANON_KEY"); // Fallback to anon key if service key is not available
+      Deno.env.get("SUPABASE_ANON_KEY");
 
     if (!supabaseUrl || !supabaseKey) {
+      console.error("Missing Supabase credentials:", {
+        urlAvailable: !!supabaseUrl,
+        keyAvailable: !!supabaseKey,
+        projectIdAvailable: !!Deno.env.get("SUPABASE_PROJECT_ID"),
+        serviceKeyAvailable: !!Deno.env.get("SUPABASE_SERVICE_KEY"),
+        anonKeyAvailable: !!Deno.env.get("SUPABASE_ANON_KEY"),
+      });
+
       throw new Error(
-        "Supabase credentials not found. Please ensure SUPABASE_PROJECT_ID and SUPABASE_SERVICE_KEY are set.",
+        "Supabase credentials not found. Please ensure SUPABASE_URL and SUPABASE_SERVICE_KEY are set.",
       );
     }
 
+    console.log("Creating Supabase client with URL:", supabaseUrl);
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
     // Execute SQL to create user_settings table if it doesn't exist
@@ -174,6 +185,10 @@ serve(async (req) => {
       },
     );
   } catch (error) {
+    console.error(
+      "Error in create_user_settings_if_not_exists:",
+      error.message,
+    );
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       {

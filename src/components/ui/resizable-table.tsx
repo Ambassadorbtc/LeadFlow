@@ -35,7 +35,14 @@ export function ResizableTable({ children, className }: ResizableTableProps) {
         Hover over column edges and drag to resize. Drag column headers to
         reorder.
       </div>
-      <table className="w-full divide-y divide-[#f3f4f6] text-sm">
+      <table
+        className="w-full divide-y divide-[#f3f4f6] text-sm"
+        style={{
+          tableLayout: "fixed",
+          borderCollapse: "separate",
+          borderSpacing: 0,
+        }}
+      >
         {children}
       </table>
     </div>
