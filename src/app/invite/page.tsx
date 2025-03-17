@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
-
 export default function InviteRedirect() {
-  redirect("/auth/invite");
+  return null;
 }
+
+export const dynamic = "force-static";
